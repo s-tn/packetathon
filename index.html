@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html class="h-full bg-white">
+
+<head>
+  <title>Hemlock Point</title>
+  <script src="/elm.js"></script>
+  <link rel="stylesheet" href="/elm.css" type="text/css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body class="h-full">
+  <div id="elm"></div>
+
+  <script defer>
+    const app = Elm.Main.init();
+	
+	app.ports.reloadPage.subscribe(function() {
+      location.reload(); // Reload the page when triggered from Elm
+    });
+  </script>
+
+</body>
+
+</html>

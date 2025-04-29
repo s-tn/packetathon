@@ -1,0 +1,1 @@
+export { PaginationEllipsis as Ellipsis, PaginationItem as Item, PaginationItems as Items, PaginationNext as Next, Pagination, PaginationPrevious as Previous, PaginationRoot as Root } from '../chunk/22YZATBG.js';
