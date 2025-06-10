@@ -29,6 +29,7 @@
     "clsx": "^2.1.1",
     "csv": "^6.3.11",
     "csv-writer": "^1.6.0",
+    "express": "^5.1.0",
     "express-session": "^1.18.1",
     "lucide-solid": "^0.507.0",
     "solid-js": "^1.9.5",
