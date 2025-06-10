@@ -6,7 +6,7 @@ import App from './App';
 import Dashboard from './Dashboard';
 
 render(() => {
-    if (location.pathname.startsWith('/signup/dashboard')) {
+    if (location.pathname.startsWith('/signup/dashboard') || location.pathname.startsWith('/signup/dashboard/reset')) {
         return <Dashboard />;
     } else {
         return <App />;

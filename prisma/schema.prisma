@@ -8,29 +8,72 @@ datasource db {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  name     String
-  teams    Team[]
-  sessions Session[]
-  createdAt DateTime @default(now())
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  admin         Boolean        @default(false)
+  phone         String
+  password      String
+  name          String
+  fname         String @default("")
+  lname         String @default("")
+  grade         String @default("9")
+  school        String @default("bt")
+  major         String @default("compsci")
+  shirt         String @default("M")
+  parents       String @default("[]")
+  registrations Registration[]
+  teams         Team[]         @relation("TeamMembers")
+  verified      Boolean        @default(false)
+  verificationCode String
+  verificationCodeExpiry DateTime
+  resetPasswordToken String? @default("000000") @unique
+  resetPasswordTokenExpiry DateTime? @default(now())
+  resetPasswordTokenUsed Boolean @default(false)
+  sessions      Session[]
+  createdAt     DateTime       @default(now())
+  requests      Request[]
+  Team          Team[]
 }
 
 model Session {
-  id        Int    @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   userId    Int
-  user      User   @relation(fields: [userId], references: [id])
-  sessionId String @unique
+  user      User     @relation(fields: [userId], references: [id])
+  sessionId String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Team {
+  id            Int            @id @default(autoincrement())
+  name          String
+  project       String
+  maxSize       String
+  categories    String
+  experience    String @default("beginner")
+  registrations Registration[]
+  leaderId      Int
+  leader        User           @relation(fields: [leaderId], references: [id])
+  members       User[]         @relation("TeamMembers")
+  requests      Request[]
+  createdAt     DateTime       @default(now())
+}
+
+model Registration {
   id        Int      @id @default(autoincrement())
-  name      String
-  project   String
-  logo      String
-  users   User[]
+  teamId    Int?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  status    Int     @default(1) // 0 = pending, 1 = accepted, 2 = rejected
+  createdAt DateTime @default(now())
+}
+
+model Request {
+  id       Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  teamId    Int
+  team      Team     @relation(fields: [teamId], references: [id])
   createdAt DateTime @default(now())
 }
