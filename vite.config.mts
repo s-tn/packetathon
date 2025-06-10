@@ -39,5 +39,6 @@ export default defineConfig({
   },
   appType: 'spa',
   server: { 
+    allowedHosts: ['linearfunctions.net', 'signup.bthackathon.com', 'localhost']
   }
 });
