@@ -167,7 +167,7 @@ export default function createAuthPlugin(): Plugin {
 
         if (!user) {
           console.log('User not found', id);
-          res.writeHead(404, { 'Content-Type': 'application/json' }); 
+          res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'User not found' }));
           return;
         }
@@ -186,7 +186,7 @@ export default function createAuthPlugin(): Plugin {
             team: true,
           },
         });
-        
+
         if (team.members.length >= parseInt(team.maxSize)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Team is full' }));
@@ -288,7 +288,7 @@ export default function createAuthPlugin(): Plugin {
           res.end(JSON.stringify({ error: 'Internal server error' }));
         });
       });
-  
+
       server.middlewares.use('/api/cancel-request', async (req, res) => {
         const request = await prisma.request.findFirst({
           where: {
@@ -393,7 +393,7 @@ export default function createAuthPlugin(): Plugin {
             res.end(JSON.stringify({ error: 'Internal server error' }));
           });
         }).catch(err => {
-          console.error(err); 
+          console.error(err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Internal server error' }));
         });
@@ -430,13 +430,13 @@ export default function createAuthPlugin(): Plugin {
 
         const teams = csvGenerate({
           header: [
-            {id: 'id', title: 'Team ID'},
-            {id: 'name', title: 'Team Name'},
-            {id: 'project', title: 'Project'},
-            {id: 'categories', title: 'Categories'},
-            {id: 'experience', title: 'Experience'},
-            {id: 'maxSize', title: 'Max Size'},
-            {id: 'members', title: 'Members'}
+            { id: 'id', title: 'Team ID' },
+            { id: 'name', title: 'Team Name' },
+            { id: 'project', title: 'Project' },
+            { id: 'categories', title: 'Categories' },
+            { id: 'experience', title: 'Experience' },
+            { id: 'maxSize', title: 'Max Size' },
+            { id: 'members', title: 'Members' }
           ]
         })
 
@@ -456,7 +456,7 @@ export default function createAuthPlugin(): Plugin {
               members: team.members.map(m => m.name).join(', ')
             }));
           }
-        )));
+          )));
       });
 
       server.middlewares.use('/api/export-people', async (req, res) => {
@@ -490,17 +490,17 @@ export default function createAuthPlugin(): Plugin {
 
         const teams = csvGenerate({
           header: [
-            {id: 'id', title: 'User ID'},
-            {id: 'name', title: 'User Name'},
-            {id: 'fname', title: 'First Name'},
-            {id: 'lname', title: 'Last Name'},
-            {id: 'email', title: 'Email Address'},
-            {id: 'phone', title: 'Phone Number'},
-            {id: 'parents', title: 'Parents'},
-            {id: 'school', title: 'School'},
-            {id: 'major', title: 'Major'},
-            {id: 'grade', title: 'Grade'},
-            {id: 'verified', title: 'Verified'},
+            { id: 'id', title: 'User ID' },
+            { id: 'name', title: 'User Name' },
+            { id: 'fname', title: 'First Name' },
+            { id: 'lname', title: 'Last Name' },
+            { id: 'email', title: 'Email Address' },
+            { id: 'phone', title: 'Phone Number' },
+            { id: 'parents', title: 'Parents' },
+            { id: 'school', title: 'School' },
+            { id: 'major', title: 'Major' },
+            { id: 'grade', title: 'Grade' },
+            { id: 'verified', title: 'Verified' },
           ]
         })
 
@@ -523,7 +523,7 @@ export default function createAuthPlugin(): Plugin {
               verified: user.verified ? 'Yes' : 'No',
             }));
           }
-        )));
+          )));
       });
 
       server.middlewares.use('/api/resend-reset', (req, res) => {
@@ -615,7 +615,7 @@ export default function createAuthPlugin(): Plugin {
           const hashedPassword = await bcrypt.hash(password, 5);
           await prisma.user.update({
             where: { id: user.id },
-            data: { 
+            data: {
               password: hashedPassword,
               resetPasswordToken: null,
               resetPasswordTokenExpiry: null,
@@ -799,7 +799,7 @@ export default function createAuthPlugin(): Plugin {
         });
         if (members.length > parseInt(maxSize)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Team size exceeds maximum allowed' }));
+          res.end(JSON.stringify({ error: 'Team size exceeds max size' }));
           return;
         }
         await prisma.team.update({
@@ -809,16 +809,281 @@ export default function createAuthPlugin(): Plugin {
             project,
             categories,
             experience,
-            maxSize: maxSize.toString(),
+            maxSize,
           },
         }).then(() => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ message: 'Team updated successfully' }));
+          res.end(JSON.stringify({ status: 'success' }));
         }).catch(err => {
           console.error(err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Internal server error' }));
         });
+      });
+
+      // Data Seeding and Management APIs
+      const seedData = async () => {
+        const schoolsCount = await prisma.school.count();
+        if (schoolsCount === 0) {
+          console.log('Seeding schools and majors...');
+          const bt = await prisma.school.create({
+            data: { value: 'bt', label: 'Bergen Tech' }
+          });
+          const at = await prisma.school.create({
+            data: { value: 'at', label: 'Applied Tech' }
+          });
+
+          const majs = {
+            bt: [
+              { value: "compsci", label: "Computer Science" },
+              { value: "digital", label: "Digital Media" },
+              { value: "business", label: "Business" },
+              { value: "aero", label: "Aerospace Engineering" },
+              { value: "auto", label: "Automotive Engineering" },
+              { value: "law", label: "Law" },
+              { value: "culinary", label: "Culinary" },
+              { value: "comart", label: "Commercial Art" },
+              { value: "other", label: "Other" }
+            ],
+            at: [
+              { value: "cyber", label: "Cybersecurity" },
+              { value: "other", label: "Other" }
+            ]
+          };
+
+          for (const m of majs.bt) {
+            await prisma.major.create({
+              data: { ...m, schoolId: bt.id }
+            });
+          }
+          for (const m of majs.at) {
+            await prisma.major.create({
+              data: { ...m, schoolId: at.id }
+            });
+          }
+        }
+
+        const catCount = await prisma.category.count();
+        if (catCount === 0) {
+          console.log('Seeding categories...');
+          const categories = [
+            { value: 'ai', label: 'Best Artificial Intelligence' },
+            { value: 'mobile', label: 'Best Mobile App' },
+            { value: 'hardware', label: 'Best Physical System' },
+            { value: 'game', label: 'Best Game' },
+            { value: 'freshman', label: 'Best Freshman Project' },
+            { value: 'beginner', label: 'Best New Coder' }
+          ];
+          for (const c of categories) {
+            await prisma.category.create({ data: c });
+          }
+        }
+      };
+
+      // Run seeding
+      seedData();
+
+
+      // Schools API
+      server.middlewares.use('/api/schools', async (req, res) => {
+        if (req.method === 'GET') {
+          const schools = await prisma.school.findMany({ include: { majors: true } });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ schools }));
+        } else if (req.method === 'POST') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { value, label } = req.body;
+          try {
+            const school = await prisma.school.create({ data: { value, label } });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ school }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to create school' }));
+          }
+        } else if (req.method === 'DELETE') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { id } = req.body;
+          try {
+            await prisma.major.deleteMany({ where: { schoolId: id } }); // Cascade delete majors
+            await prisma.school.delete({ where: { id } });
+            res.writeHead(200).end(JSON.stringify({ success: true }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to delete school' }));
+          }
+        }
+      });
+
+      // Majors API
+      server.middlewares.use('/api/majors', async (req, res) => {
+        if (req.method === 'POST') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { value, label, schoolId } = req.body;
+          try {
+            const major = await prisma.major.create({ data: { value, label, schoolId } });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ major }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to create major' }));
+          }
+        } else if (req.method === 'DELETE') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { id } = req.body;
+          try {
+            await prisma.major.delete({ where: { id } });
+            res.writeHead(200).end(JSON.stringify({ success: true }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to delete major' }));
+          }
+        }
+      });
+
+      // Categories API
+      server.middlewares.use('/api/categories', async (req, res) => {
+        if (req.method === 'GET') {
+          const categories = await prisma.category.findMany();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ categories }));
+        } else if (req.method === 'POST') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { value, label } = req.body;
+          try {
+            const category = await prisma.category.create({ data: { value, label } });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ category }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to create category' }));
+          }
+        } else if (req.method === 'DELETE') {
+          // Admin check
+          if (!req.session.userId) return res.writeHead(401).end();
+          const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!user?.admin) return res.writeHead(403).end();
+
+          const { id } = req.body;
+          try {
+            await prisma.category.delete({ where: { id } });
+            res.writeHead(200).end(JSON.stringify({ success: true }));
+          } catch (e) {
+            res.writeHead(500).end(JSON.stringify({ error: 'Failed to delete category' }));
+          }
+        }
+      });
+
+      // Admin User Management API
+      server.middlewares.use('/api/admin/users', async (req, res) => {
+        // Admin check
+        if (!req.session.userId) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: 'Not logged in' }));
+        }
+        const currentUser = await prisma.user.findUnique({ where: { id: req.session.userId } });
+        if (!currentUser?.admin) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: 'Forbidden' }));
+        }
+
+        if (req.method === 'GET') {
+          const users = await prisma.user.findMany({
+            orderBy: { id: 'desc' },
+            include: {
+                teams: {
+                    select: { id: true, name: true }
+                }
+            }
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ users }));
+        } else if (req.method === 'POST') { // Actions
+          const { action, userId, data } = req.body;
+          if (!userId) return res.writeHead(400).end();
+
+          try {
+            if (action === 'delete') {
+              // Delete related records first if necessary, or rely on cascade if configured (Prisma doesn't cascade by default unless specified in schema, but we didn't add cascade there. We might need to manually clean up.)
+              // Minimal cleanup:
+              await prisma.registration.deleteMany({ where: { userId } });
+              await prisma.session.deleteMany({ where: { userId } });
+              // Team cleanup if leader... complex.
+              // For now, let's just try to delete the user and see if it fails.
+              await prisma.user.delete({ where: { id: userId } });
+            } else if (action === 'verify') {
+              await prisma.user.update({ where: { id: userId }, data: { verified: true } });
+            } else if (action === 'unverify') {
+              await prisma.user.update({ where: { id: userId }, data: { verified: false } });
+            } else if (action === 'promote') {
+              await prisma.user.update({ where: { id: userId }, data: { admin: true } });
+            } else if (action === 'demote') {
+              await prisma.user.update({ where: { id: userId }, data: { admin: false } });
+            }
+            res.writeHead(200).end(JSON.stringify({ success: true }));
+          } catch (e) {
+            console.error(e);
+            res.writeHead(500).end(JSON.stringify({ error: 'Action failed' }));
+          }
+        }
+      });
+
+      server.middlewares.use('/api/admin/teams', async (req, res) => {
+          if (!req.session.userId) {
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ error: 'Not logged in' }));
+          }
+          const currentUser = await prisma.user.findUnique({ where: { id: req.session.userId } });
+          if (!currentUser?.admin) {
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ error: 'Forbidden' }));
+          }
+
+          if (req.method === 'GET') {
+              const teams = await prisma.team.findMany({
+                  include: {
+                      members: { select: { id: true, name: true, email: true } },
+                      leader: { select: { id: true, name: true, email: true } },
+                      requests: { include: { user: { select: { id: true, name: true } } } }
+                  },
+                  orderBy: { id: 'desc' }
+              });
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ teams }));
+          } else if (req.method === 'POST') {
+              const { action, teamId } = req.body;
+              if (!teamId) return res.writeHead(400).end();
+
+              try {
+                  if (action === 'delete') {
+                      await prisma.request.deleteMany({ where: { teamId } });
+                      await prisma.registration.updateMany({
+                          where: { teamId },
+                          data: { teamId: null, status: 2 }
+                      });
+                      await prisma.team.delete({ where: { id: teamId } });
+                  }
+                  res.writeHead(200).end(JSON.stringify({ success: true }));
+              } catch (e) {
+                  console.error(e);
+                  res.writeHead(500).end(JSON.stringify({ error: 'Action failed' }));
+              }
+          }
       });
 
       server.middlewares.use('/api/user', (req, res) => {
@@ -1323,7 +1588,7 @@ function compileParents(screen0) {
     });
     parents.push(parent);
   }
-  
+
   return parents;
 }
 
