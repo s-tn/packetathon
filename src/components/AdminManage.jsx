@@ -456,7 +456,7 @@ const AdminManage = (props) => {
                                         }
                                     })
                                 }).then(r => r.json()).then(d => {
-                                    if (d.success) { fetchTeams(); e.target.reset(); setAdminTeamLeader(null); setTeamSelectedCategories([]); }
+                                    if (!d.error) { fetchTeams(); e.target.reset(); setAdminTeamLeader(null); setTeamSelectedCategories([]); }
                                     else alert(d.error || 'Failed to create team');
                                 });
                             }} class="flex flex-wrap gap-2 items-end">

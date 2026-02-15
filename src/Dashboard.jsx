@@ -124,7 +124,7 @@ const Dashboard = () => {
         'Content-Type': 'application/json',
       },
     }).then(res => res.json()).then(data => {
-      if (data.message === "Verification email sent") {
+      if (!data.error) {
         setResent(true);
       } else {
         setResent(false);
@@ -146,7 +146,7 @@ const Dashboard = () => {
       },
       body: JSON.stringify({ token: resetToken() }),
     }).then(res => res.json()).then(data => {
-      if (data.message === "Reset email sent") {
+      if (!data.error) {
         setResent(true);
         location.href = '/signup#5';
       } else {
@@ -350,7 +350,7 @@ const Dashboard = () => {
       },
       body: JSON.stringify({ teamId: joinRequest().id }),
     }).then(res => res.json()).then(data => {
-      if (data.message === 'Request sent successfully') {
+      if (!data.error) {
         alert('Join request sent');
         setJoinRequest(null);
         setPage('/');
@@ -391,7 +391,7 @@ const Dashboard = () => {
               },
               body: JSON.stringify({ ...data, token: resetToken() }),
             }).then(res => res.json()).then(data => {
-              if (data.message === 'Password reset successful') {
+              if (!data.error) {
                 location.href = '/signup/dashboard';
               } else {
                 alert('Error resetting password');
@@ -459,7 +459,7 @@ const Dashboard = () => {
                     <Button onClick={() => {
                       if (!confirm("Cancel your join request?")) return;
                       fetch('/api/cancel-request', { method: 'POST' }).then(r => r.json()).then(d => {
-                        if (d.message === 'Request cancelled') location.reload();
+                        if (!d.error) location.reload();
                         else alert('Error cancelling request');
                       });
                     }} variant="outline" class="w-full">Cancel Join Request</Button>
@@ -702,11 +702,11 @@ const Dashboard = () => {
                     },
                     body: JSON.stringify({ ...data }),
                   }).then(res => res.json()).then(data => {
-                    if (data.status === 'success') {
+                    if (!data.error) {
                       window.onbeforeunload = null;
                       location.replace('/signup/dashboard/team');
                     } else {
-                      alert('Error creating team');
+                      alert(data.error || 'Error creating team');
                     }
                   }).catch(err => {
                     alert('Error creating team');
@@ -812,7 +812,7 @@ const Dashboard = () => {
                   },
                   body: JSON.stringify({ id: user().id }),
                 }).then(res => res.json()).then(data => {
-                  if (data.message === 'User removed from the team' || data.message === 'Team deleted and user removed') {
+                  if (!data.error) {
                     location.reload();
                   } else {
                     alert('Error leaving team');
@@ -996,11 +996,11 @@ const Dashboard = () => {
                   },
                   body: JSON.stringify({ ...data, id: user().team.id }),
                 }).then(res => res.json()).then(data => {
-                  if (data.message === 'Team updated successfully') {
+                  if (!data.error) {
                     window.onbeforeunload = null;
                     location.reload();
                   } else {
-                    alert('Error updating team');
+                    alert(data.error || 'Error updating team');
                   }
                 }).catch(err => {
                   alert('Error updating team');
@@ -1112,7 +1112,7 @@ const Dashboard = () => {
                   },
                   body: JSON.stringify({ id: user().id }),
                 }).then(res => res.json()).then(data => {
-                  if (data.message === 'User deleted successfully') {
+                  if (!data.error) {
                     alert('Your account has been deleted successfully.');
                     location.href = '/';
                   } else {
@@ -1140,11 +1140,11 @@ const Dashboard = () => {
                 },
                 body: JSON.stringify({ ...data, id: user().team.id }),
               }).then(res => res.json()).then(data => {
-                if (data.message === 'Team updated successfully') {
+                if (!data.error) {
                   window.onbeforeunload = null;
                   location.reload();
                 } else {
-                  alert('Error updating team');
+                  alert(data.error || 'Error updating team');
                 }
               }).catch(err => {
                 alert('Error updating team');
@@ -1513,7 +1513,7 @@ const Dashboard = () => {
                         },
                         body: JSON.stringify({ code }),
                       }).then(res => res.json()).then(data => {
-                        if (data.message === 'User verified successfully') {
+                        if (!data.error) {
                           location.href = '/signup/dashboard';
                         } else {
                           alert('Invalid code');
@@ -1532,7 +1532,7 @@ const Dashboard = () => {
                         },
                         body: JSON.stringify({ code }),
                       }).then(res => res.json()).then(data => {
-                        if (data.message === 'User verified successfully') {
+                        if (!data.error) {
                           location.href = '/signup/dashboard';
                         } else {
                           alert('Invalid code');
@@ -1581,7 +1581,7 @@ const Dashboard = () => {
                         },
                         body: JSON.stringify({ code }),
                       }).then(res => res.json()).then(data => {
-                        if (data.success) {
+                        if (!data.error) {
                           location.href = '/signup/dashboard';
                         } else {
                           alert('Invalid code');

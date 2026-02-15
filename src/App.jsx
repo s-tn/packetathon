@@ -1414,7 +1414,7 @@ const App = () => {
                     },
                     body: JSON.stringify(registrationData)
                   }).then(res => res.json()).then(data => {
-                    if (data.message === 'Registration successful') {
+                    if (!data.error) {
                       alert("Registration successful. Please check your email for confirmation.");
                       localStorage.removeItem('screen0');
                       localStorage.removeItem('screen1');

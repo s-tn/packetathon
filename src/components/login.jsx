@@ -25,7 +25,7 @@ export default function Login() {
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    if (data.message === "Reset email sent") {
+                    if (!data.error) {
                         alert("Password reset link sent to your email");
                     } else {
                         alert("Error sending password reset link");
@@ -47,7 +47,7 @@ export default function Login() {
         })
             .then((res) => res.json())
             .then((data) => {
-                if (data.message === "Login successful") {
+                if (!data.error) {
                     location.href = "/signup/dashboard";
                 } else {
                     alert("Invalid credentials");
