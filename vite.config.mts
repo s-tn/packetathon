@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from '@tailwindcss/vite';
 import apiRoutes from "vite-plugin-api-routes";
-import authPlugin from './vite-plugin-auth'
+import authPlugin from './server'
  
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

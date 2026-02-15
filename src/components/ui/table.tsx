@@ -5,12 +5,10 @@ export const Table = (props: ComponentProps<"table">) => {
 	const [local, rest] = splitProps(props, ["class"]);
 
 	return (
-		<div class="w-full overflow-auto">
-			<table
-				class={cn("w-full caption-bottom text-sm", local.class)}
-				{...rest}
-			/>
-		</div>
+		<table
+			class={cn("w-full caption-bottom text-sm", local.class)}
+			{...rest}
+		/>
 	);
 };
 
@@ -45,7 +43,7 @@ export const TableRow = (props: ComponentProps<"tr">) => {
 	return (
 		<tr
 			class={cn(
-				"border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+				"border-b transition-colors hover:bg-white/10 data-[state=selected]:bg-muted",
 				local.class,
 			)}
 			{...rest}

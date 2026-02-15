@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select"
 import { Checkbox, CheckboxControl, CheckboxDescription, CheckboxLabel } from "./components/ui/checkbox"
 import Login from './components/login';
-import majors from './majors';
+import AdminManage from './components/AdminManage';
+import SchoolAdminDashboard from './components/SchoolAdminDashboard';
+// import majors from './majors';
 import {
 	Tabs,
 	TabsContent,
@@ -24,7 +26,8 @@ import {
 import { TextArea } from "./components/ui/textarea"
 import { TextField, TextFieldRoot, TextFieldLabel } from "./components/ui/textfield";
 import { Separator } from "./components/ui/separator"
-import { createEffect, createSignal } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { Label } from "@kobalte/core/select";
 
 // const parseCSV = (csv) => {
@@ -226,6 +229,71 @@ const Dashboard = () => {
   const [ shirt, setShirt ] = createSignal(null);
   const [ teamData, setTeamData ] = createSignal(null);
   const [ userData, setUserData ] = createSignal(null);
+  const [ schools, setSchools ] = createSignal([]);
+  const [ allMajors, setAllMajors ] = createSignal({});
+  const [ availableCategories, setAvailableCategories ] = createSignal([]);
+
+  const [ categoryInfoOpen, setCategoryInfoOpen ] = createSignal(false);
+  const [ categoryInfoData, setCategoryInfoData ] = createSignal(null);
+
+  const showCategoryInfo = (cat) => {
+    setCategoryInfoData(cat);
+    setCategoryInfoOpen(true);
+  };
+
+  const CategoryPicker = (props) => {
+    const cats = () => props.categories || availableCategories() || [];
+    return (
+      <div class="space-y-2">
+        <div class="text-left w-full text-sm font-medium">Award Categories</div>
+        <div class="grid grid-cols-2 gap-2">
+          {cats().map(cat => {
+            const isSelected = () => (props.selected || []).some(s => s.value === cat.value);
+            return (
+              <button
+                type="button"
+                class={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all border ${isSelected() ? 'bg-blue-600 text-white border-blue-500' : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'}`}
+                onClick={() => {
+                  if (isSelected()) {
+                    props.onChange((props.selected || []).filter(s => s.value !== cat.value));
+                  } else {
+                    props.onChange([...(props.selected || []), { value: cat.value, label: cat.label }]);
+                  }
+                }}
+              >
+                <span>{cat.label}{cat.prize ? ` ($${cat.prize})` : ''}</span>
+                {cat.description && (
+                  <span
+                    class={`ml-2 shrink-0 ${isSelected() ? 'text-blue-200' : 'text-zinc-400'}`}
+                    onClick={(e) => { e.stopPropagation(); showCategoryInfo(cat); }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  createEffect(() => {
+    fetch('/api/categories').then(res => res.json()).then(data => {
+      setAvailableCategories(data.categories);
+    }).catch(err => console.error(err));
+  });
+
+  createEffect(() => {
+    fetch('/api/schools').then(res => res.json()).then(data => {
+      setSchools(data.schools);
+      const majorsMap = {};
+      data.schools.forEach(school => {
+        majorsMap[school.value] = school.majors;
+      });
+      setAllMajors(majorsMap);
+    }).catch(err => console.error(err));
+  });
 
   createEffect(() => {
     if (searchTeam() === '') {
@@ -352,44 +420,73 @@ const Dashboard = () => {
     '/': () => (
       <>
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Welcome to the 2026 Bergen Tech Hackathon!</h2>
-          <p className="text-gray-600 mb-4">Lorem ipsum dolor sit amet consectetur adipisicing elit. Adipisci fugit ipsum quod, voluptates, obcaecati minus quisquam praesentium repellat a quaerat sit facere? Accusantium voluptas debitis quidem maxime numquam quasi veritatis minus quod, quibusdam dicta aliquam fuga commodi illum animi dolor soluta eaque libero ex, cum, distinctio temporibus eligendi tempora asperiores?</p>
-          <div className="flex flex-row items-center justify-center space-x-2">
-            {
-              user().admin ? <Button onClick={() => setPage('/admin')}>Admin Dashboard</Button> : (
-              <>
-                {
-                  user().registration?.teamId ? (
-                    <>
-                      <Button onClick={() => setPage('/team')} disabled={!user().team}>{!user().team ? "Waiting for Join Request" : "View Team"}</Button>
-                      {!user().team ? <Button onClick={() => {
-                        if (!confirm("Are you sure you want to cancel your join request? You will need to create a new request if you want to join a team.")) {
-                          return;
-                        }
-                        fetch('/api/cancel-request', {
-                          method: 'POST'
-                        }).then(res => res.json()).then(data => {
-                          if (data.message === 'Request cancelled') {
-                            setPage('/');
-                            location.reload();
-                          } else {
-                            alert('Error cancelling request');
-                          }
-                        }).catch(err => {
-                          alert('Error cancelling request');
-                        });
-                      }} class="mr-4">Cancel Request</Button> : <></>}
-                    </>
-                  ) : (
-                    <>
-                      <Button onClick={() => setPage('/create')}>Create Team</Button>
-                      <Button onClick={() => setPage('/join')}>Join a Team</Button>
-                      </>
-                  )
-                }
-              </>)
-            }
-            <Button onClick={() => setPage('/manage')} variant="outline">Manage Account</Button>
+          <h2 className="text-2xl font-bold mb-2">Welcome to the 2026 Bergen Tech Hackathon!</h2>
+          <p className="text-gray-500 mb-6">Manage your registration, team, and hackathon details below.</p>
+          <div className="flex flex-col items-center gap-4">
+            {/* Super Admin */}
+            {user().admin && (
+              <div className="w-full max-w-md space-y-3">
+                <Button onClick={() => setPage('/admin')} class="w-full">Admin Dashboard</Button>
+                {user().isSchoolAdmin && (
+                  <Button onClick={() => setPage('/school-admin')} class="w-full" variant="outline">School Admin Dashboard</Button>
+                )}
+              </div>
+            )}
+
+            {/* School Admin (not super admin) */}
+            {!user().admin && user().isSchoolAdmin && (
+              <div className="w-full max-w-md space-y-3">
+                <Button onClick={() => setPage('/school-admin')} class="w-full">School Admin Dashboard</Button>
+              </div>
+            )}
+
+            {/* Student with team */}
+            {!user().admin && !user().isSchoolAdmin && user().registration?.teamId && (
+              <div className="w-full max-w-md space-y-3">
+                {user().team ? (
+                  <Card class="text-left">
+                    <CardHeader class="pb-2">
+                      <CardTitle class="text-lg">Your Team: {user().team.name}</CardTitle>
+                      <CardDescription>{user().team.members?.length || 0} of {user().team.maxSize} members</CardDescription>
+                    </CardHeader>
+                    <CardContent class="pt-2">
+                      <Button onClick={() => setPage('/team')} class="w-full">View Team</Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-amber-400">Your join request is pending approval.</p>
+                    <Button onClick={() => {
+                      if (!confirm("Cancel your join request?")) return;
+                      fetch('/api/cancel-request', { method: 'POST' }).then(r => r.json()).then(d => {
+                        if (d.message === 'Request cancelled') location.reload();
+                        else alert('Error cancelling request');
+                      });
+                    }} variant="outline" class="w-full">Cancel Join Request</Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Student without team */}
+            {!user().admin && !user().isSchoolAdmin && !user().registration?.teamId && (
+              <div className="w-full max-w-md space-y-3">
+                {user().allowTeamCreation === false ? (
+                  <Card class="text-left border-amber-600/30">
+                    <CardContent class="pt-4">
+                      <p className="text-sm text-amber-300">Team assignment for your school is managed by your school administrator. Contact them to be assigned to a team.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    <Button onClick={() => setPage('/create')} class="w-full">Create Team</Button>
+                    <Button onClick={() => setPage('/join')} class="w-full" variant="outline">Join a Team</Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <Button onClick={() => setPage('/manage')} variant="outline" class="mt-2">Manage Account</Button>
           </div>
         </div>
       </>
@@ -402,6 +499,7 @@ const Dashboard = () => {
             <Button onClick={() => setPage('/')}>Back</Button>
           </div>
           <div className="space-y-4">
+            <Button onClick={() => setPage('/admin/manage')} class="w-full">Manage System (Schools, Majors, Users)</Button>
             <Button onClick={() => setPage('/admin/viewer')} class="w-full">View Data</Button>
             <div className="flex flex-row gap-4 w-full">
               <Button variant="outline" class="flex-1" onClick={() => {
@@ -444,6 +542,12 @@ const Dashboard = () => {
           </div>
         </div>
       </>
+    ),
+    '/admin/manage': () => (
+      <AdminManage setPage={setPage} />
+    ),
+    '/school-admin': () => (
+      <SchoolAdminDashboard setPage={setPage} />
     ),
     '/admin/viewer': () => (
       /* csv viewer n stuff */
@@ -575,10 +679,7 @@ const Dashboard = () => {
         <div className="text-center mt-[calc(var(--spacing)_*_-2)]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Create Team</h2>
-            <Button onClick={() => {
-              window.history.pushState({}, '', '/signup/dashboard/team');
-              location.href = location.href;
-            }}>Back</Button>
+            <Button onClick={() => setPage('/')}>Back</Button>
           </div>
           {
             user().team ? <div className="text-center p-16">
@@ -675,47 +776,11 @@ const Dashboard = () => {
                         </SelectTrigger>
                         <SelectContent />
                       </Select>
-                      <Select 
-                        options={(() => {
-                          let opts = [
-                            { value: 'ai', label: 'Best Artificial Intelligence' },
-                            { value: 'mobile', label: 'Best Mobile App' },
-                            { value: 'hardware', label: 'Best Physical System' },
-                            { value: 'game', label: 'Best Game' },
-                          ];
-
-                          if (user().grade === '9') {
-                            opts.push({ value: 'freshman', label: 'Best Freshman Project' });
-                          }
-
-                          if (!experience()?.value) {
-                            opts.push({ value: 'beginner', label: 'Best New Coder' });
-                          }
-
-                          return opts;
-                        })()}
-                        class="w-full space-y-1"
-                        label="Categories"
-                        multiple={true}
-                        optionValue="value"
-                        value={categories()}
-                        onChange={(checked) => {
-                          if (checked) {
-                            setCategories(checked);
-                          } else {
-                            setCategories(null);
-                          }
-                        }}
-                        optionTextValue="label"
-                        placeholder="Select your categories"
-                        itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
-                      >
-                        <div className="text-left w-full text-sm data-[disabled]:cursor-not-allowed data-[disabled]:opacity-70 font-medium data-[invalid]:text-destructive">Categories</div>
-                        <SelectTrigger id="size">
-                          <SelectValue class="p-3 px-0">{state => state.selectedOptions().map(option => option.label).join(', ')}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent />
-                      </Select>
+                      <CategoryPicker
+                        categories={availableCategories()}
+                        selected={categories()}
+                        onChange={setCategories}
+                      />
                     </CardContent>
                     <CardFooter class="pt-4">
                       <Button class="w-full h-full" type="submit">Submit</Button>
@@ -913,10 +978,7 @@ const Dashboard = () => {
         <div className="text-center mt-[calc(var(--spacing)_*_-2)]">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Edit Team</h2>
-            <Button onClick={() => {
-              window.history.pushState({}, '', '/signup/dashboard/team');
-              location.href = location.href;
-            }}>Back</Button>
+            <Button onClick={() => setPage('/team')}>Back</Button>
           </div>
           {
             (user().team.leaderId === user().id) ? <div className="">
@@ -1010,47 +1072,11 @@ const Dashboard = () => {
                       </SelectTrigger>
                       <SelectContent />
                     </Select>
-                    <Select 
-                      options={(() => {
-                        let opts = [
-                          { value: 'ai', label: 'Best Artificial Intelligence' },
-                          { value: 'mobile', label: 'Best Mobile App' },
-                          { value: 'hardware', label: 'Best Physical System' },
-                          { value: 'game', label: 'Best Game' },
-                        ];
-
-                        if (user().grade === '9') {
-                          opts.push({ value: 'freshman', label: 'Best Freshman Project' });
-                        }
-
-                        if (!experience()?.value) {
-                          opts.push({ value: 'beginner', label: 'Best New Coder' });
-                        }
-
-                        return opts;
-                      })()}
-                      class="w-full space-y-1"
-                      label="Categories"
-                      multiple={true}
-                      optionValue="value"
-                      value={categories()}
-                      onChange={(checked) => {
-                        if (checked) {
-                          setCategories(checked);
-                        } else {
-                          setCategories(null);
-                        }
-                      }}
-                      optionTextValue="label"
-                      placeholder="Select your categories"
-                      itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
-                    >
-                      <div className="text-left w-full text-sm data-[disabled]:cursor-not-allowed data-[disabled]:opacity-70 font-medium data-[invalid]:text-destructive">Categories</div>
-                      <SelectTrigger id="size">
-                        <SelectValue class="p-3">{state => state.selectedOptions().map(option => option.label).join(', ')}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent />
-                    </Select>
+                    <CategoryPicker
+                      categories={availableCategories()}
+                      selected={categories()}
+                      onChange={setCategories}
+                    />
                   </CardContent>
                   <CardFooter class="pt-4">
                     <Button class="w-full h-full" type="submit">Save</Button>
@@ -1096,10 +1122,7 @@ const Dashboard = () => {
                   alert('Error deleting account');
                 });
               }}>Delete Account</Button>
-              <Button onClick={() => {
-                window.history.pushState({}, '', '/signup/dashboard/team');
-                location.href = location.href;
-              }}>Back</Button>
+              <Button onClick={() => setPage('/')}>Back</Button>
             </div>
           </div>
           <div className="">
@@ -1281,7 +1304,7 @@ const Dashboard = () => {
                   <div className="flex flex-row gap-4 w-full">
                     <Select 
                       required
-                      options={[{value: "bt", label: "Bergen Tech"}, {value: "at", label: "Applied Tech"}]}
+                      options={schools()}
                       label="School"
                       class="flex-1"
                       optionValue="value"
@@ -1305,7 +1328,7 @@ const Dashboard = () => {
                     </Select>
                     <Select 
                       required
-                      options={majors[school()] || []}
+                      options={allMajors()[school()] || []}
                       disabled={!school()}
                       value={major() ? {value: major()} : null}
                       label="Major"
@@ -1612,6 +1635,22 @@ const Dashboard = () => {
               </a>
             </p>
           </div>
+
+          <Show when={categoryInfoOpen()}>
+            <Portal>
+              <div class="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setCategoryInfoOpen(false)}>
+                <div class="absolute inset-0 bg-black/50" />
+                <div class="relative bg-white border border-zinc-200 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <button class="absolute right-3 top-3 text-zinc-400 hover:text-zinc-600" onClick={() => setCategoryInfoOpen(false)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                  <h3 class="text-lg font-semibold text-zinc-900 mb-2">{categoryInfoData()?.label}</h3>
+                  {categoryInfoData()?.prize > 0 && <p class="text-sm font-medium text-green-600 mb-2">Prize: ${categoryInfoData()?.prize?.toLocaleString()}</p>}
+                  <p class="text-sm text-zinc-600 leading-relaxed">{categoryInfoData()?.description}</p>
+                </div>
+              </div>
+            </Portal>
+          </Show>
         </main>
       </Ui>
     </>

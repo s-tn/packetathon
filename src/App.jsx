@@ -6,7 +6,7 @@ import { Checkbox, CheckboxControl, CheckboxDescription, CheckboxLabel } from ".
 import Login from './components/login';
 import { ToggleGroup, ToggleGroupItem } from './components/ui/toggle-group';
 import { Progress } from "./components/ui/progress";
-import majors from './majors';
+// import majors from './majors';
 import {
 	Tabs,
 	TabsContent,
@@ -18,10 +18,77 @@ import { TextArea } from "./components/ui/textarea"
 import { TextField, TextFieldRoot, TextFieldLabel } from "./components/ui/textfield";
 import { Separator } from "./components/ui/separator"
 import { Label } from "@kobalte/core/select";
-import { createEffect, createSignal } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import Register from "./components/register";
 
 const App = () => {
+  const [ schools, setSchools ] = createSignal([]);
+  const [ majors, setMajors ] = createSignal({});
+
+  createEffect(() => {
+    fetch('/api/schools').then(res => res.json()).then(data => {
+      setSchools(data.schools);
+      const majorsMap = {};
+      data.schools.forEach(school => {
+        majorsMap[school.value] = school.majors;
+      });
+      setMajors(majorsMap);
+    }).catch(err => console.error(err));
+  });
+
+  const [ availableCategories, setAvailableCategories ] = createSignal([]);
+  const [ categoryInfoOpen, setCategoryInfoOpen ] = createSignal(false);
+  const [ categoryInfoData, setCategoryInfoData ] = createSignal(null);
+
+  createEffect(() => {
+    fetch('/api/categories').then(res => res.json()).then(data => {
+      setAvailableCategories(data.categories);
+    }).catch(err => console.error(err));
+  });
+
+  const showCategoryInfo = (cat) => {
+    setCategoryInfoData(cat);
+    setCategoryInfoOpen(true);
+  };
+
+  const CategoryPicker = (props) => {
+    const cats = () => props.categories || availableCategories() || [];
+    return (
+      <div class="space-y-2">
+        <div class="text-left w-full text-sm font-medium">Award Categories</div>
+        <div class="grid grid-cols-2 gap-2">
+          {cats().map(cat => {
+            const isSelected = () => (props.selected || []).some(s => s.value === cat.value);
+            return (
+              <button
+                type="button"
+                class={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all border ${isSelected() ? 'bg-blue-600 text-white border-blue-500' : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'}`}
+                onClick={() => {
+                  if (isSelected()) {
+                    props.onChange((props.selected || []).filter(s => s.value !== cat.value));
+                  } else {
+                    props.onChange([...(props.selected || []), { value: cat.value, label: cat.label }]);
+                  }
+                }}
+              >
+                <span>{cat.label}{cat.prize ? ` ($${cat.prize})` : ''}</span>
+                {cat.description && (
+                  <span
+                    class={`ml-2 shrink-0 ${isSelected() ? 'text-blue-200' : 'text-zinc-400'}`}
+                    onClick={(e) => { e.stopPropagation(); showCategoryInfo(cat); }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   let _data = {
     screen0: null,
     screen1: null,
@@ -80,6 +147,23 @@ const App = () => {
   const [ searchTeam, setSearchTeam ] = createSignal('');
   const [ joinRequest, setJoinRequest ] = createSignal(null);
   const [ firstTab, setFirstTab ] = createSignal('signup');
+  const [ selfRegBlocked, setSelfRegBlocked ] = createSignal(null);
+
+  // Check self-registration when school changes
+  createEffect(() => {
+    const selectedSchool = school();
+    if (selectedSchool && schools().length > 0) {
+      const schoolData = schools().find(s => s.value === selectedSchool.value);
+      if (schoolData && schoolData.allowSelfRegistration === false) {
+        const adminContacts = schoolData.admins?.map(a => a.user?.email).filter(Boolean).join(', ') || 'your school administrator';
+        setSelfRegBlocked({ schoolLabel: schoolData.label, adminContacts });
+      } else {
+        setSelfRegBlocked(null);
+      }
+    } else {
+      setSelfRegBlocked(null);
+    }
+  });
 
   createEffect(() => {
     setTeams(_teams().filter(team => {
@@ -330,7 +414,7 @@ const App = () => {
             <div className="space-y-2">
               <Select 
                 required
-                options={[{value: "bt", label: "Bergen Tech"}, {value: "at", label: "Applied Tech"}]}
+                options={schools()}
                 label="School"
                 optionValue="value"
                 optionTextValue="label"
@@ -355,7 +439,7 @@ const App = () => {
             <div className="space-y-2">
               <Select 
                 required
-                options={majors[school()?.value] || []}
+                options={majors()[school()?.value] || []}
                 disabled={!school()}
                 value={major()}
                 label="Major"
@@ -378,8 +462,16 @@ const App = () => {
                 <SelectContent />
               </Select>
             </div>
+            {selfRegBlocked() && (
+              <div class="col-span-2 p-4 rounded-lg border border-amber-500/50 bg-amber-900/20">
+                <p class="font-semibold text-amber-300">Registration Managed by School</p>
+                <p class="text-sm text-amber-200/80 mt-1">
+                  Registration for {selfRegBlocked().schoolLabel} is managed by your school administrators. Please contact {selfRegBlocked().adminContacts} to register.
+                </p>
+              </div>
+            )}
             <div className="space-y-2 col-span-2">
-              <Select 
+              <Select
                 required
                 options={[{value: "9", label: "Freshman"}, {value: "10", label: "Sophomore"}, {value: "11", label: "Junior"}, {value: "12", label: "Senior"}]}
                 label="Grade/Year"
@@ -939,72 +1031,11 @@ const App = () => {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Select 
-              options={(() => {
-                let opts = [
-                  { value: 'ai', label: 'Best Artificial Intelligence' },
-                  { value: 'mobile', label: 'Best Mobile App' },
-                  { value: 'hardware', label: 'Best Physical System' },
-                  { value: 'game', label: 'Best Game' },
-                ];
-
-                if (grade()?.value === '9') {
-                  opts.push({ value: 'freshman', label: 'Best Freshman Project' });
-                }
-
-                if (experience()?.value === 'beginner') {
-                  opts.push({ value: 'beginner', label: 'Best New Coder' });
-                }
-
-                return opts;
-              })()}
-              label="Categories"
-              multiple={true}
-              optionValue="value"
-              value={categories()}
-              onChange={(checked) => {
-                 if (checked) {
-                  setCategories(checked);
-                 } else {
-                  setCategories(null);
-                 }
-              }}
-              optionTextValue="label"
-              placeholder="Select your categories"
-              itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
-            >
-              <Label>Categories</Label>
-              <SelectTrigger id="size">
-                <SelectValue>{state => state.selectedOptions().map(option => option.label).join(', ')}</SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
-          </div>
-
-          {/* <div className="space-y-2">
-            <TextFieldRoot>
-              <TextFieldLabel>Skills & Technologies</TextFieldLabel>
-              <TextArea
-                id="skills"
-                placeholder="List programming languages, frameworks, or other technical skills you're comfortable with"
-              />
-            </TextFieldRoot>
-          </div> */}
-
-          <div className="space-y-2">
-            {/*<Select>
-              <Label>Do you have a team?</Label>
-              <SelectTrigger id="team">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes, I have a team</SelectItem>
-                <SelectItem value="no">No, I need a team</SelectItem>
-                <SelectItem value="forming">I'm forming a team</SelectItem>
-              </SelectContent>
-            </Select>*/}
-          </div>
+          <CategoryPicker
+            categories={availableCategories()}
+            selected={categories()}
+            onChange={setCategories}
+          />
 
           <div className="space-y-2">
             <TextFieldRoot>
@@ -1017,13 +1048,6 @@ const App = () => {
               />
             </TextFieldRoot>
           </div>
-
-          {/* <div className="flex items-center space-x-2">
-            <Checkbox id="tshirt" class="flex items-center space-x-2">
-              <CheckboxControl />
-              <CheckboxLabel htmlFor="tshirt">I would like a hackathon T-shirt</CheckboxLabel>
-            </Checkbox>
-          </div> */}
         </TabsContent>
         <TabsContent value="solo" class="space-y-4">
           <h3 className="text-lg font-medium">Work Alone</h3>
@@ -1066,72 +1090,11 @@ const App = () => {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Select 
-              options={(() => {
-                let opts = [
-                  { value: 'ai', label: 'Best Artificial Intelligence' },
-                  { value: 'mobile', label: 'Best Mobile App' },
-                  { value: 'hardware', label: 'Best Physical System' },
-                  { value: 'game', label: 'Best Game' },
-                ];
-
-                if (grade()?.value === '9') {
-                  opts.push({ value: 'freshman', label: 'Best Freshman Project' });
-                }
-
-                if (experience()?.value === 'beginner') {
-                  opts.push({ value: 'beginner', label: 'Best New Coder' });
-                }
-
-                return opts;
-              })()}
-              label="Categories"
-              multiple={true}
-              optionValue="value"
-              value={categories()}
-              onChange={(checked) => {
-                 if (checked) {
-                  setCategories(checked);
-                 } else {
-                  setCategories(null);
-                 }
-              }}
-              optionTextValue="label"
-              placeholder="Select your categories"
-              itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
-            >
-              <Label>Categories</Label>
-              <SelectTrigger id="size">
-                <SelectValue>{state => state.selectedOptions().map(option => option.label).join(', ')}</SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
-          </div>
-
-          {/* <div className="space-y-2">
-            <TextFieldRoot>
-              <TextFieldLabel>Skills & Technologies</TextFieldLabel>
-              <TextArea
-                id="skills"
-                placeholder="List programming languages, frameworks, or other technical skills you're comfortable with"
-              />
-            </TextFieldRoot>
-          </div> */}
-
-          <div className="space-y-2">
-            {/*<Select>
-              <Label>Do you have a team?</Label>
-              <SelectTrigger id="team">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes">Yes, I have a team</SelectItem>
-                <SelectItem value="no">No, I need a team</SelectItem>
-                <SelectItem value="forming">I'm forming a team</SelectItem>
-              </SelectContent>
-            </Select>*/}
-          </div>
+          <CategoryPicker
+            categories={availableCategories()}
+            selected={categories()}
+            onChange={setCategories}
+          />
 
           <div className="space-y-2">
             <TextFieldRoot>
@@ -1144,13 +1107,6 @@ const App = () => {
               />
             </TextFieldRoot>
           </div>
-
-          {/* <div className="flex items-center space-x-2">
-            <Checkbox id="tshirt" class="flex items-center space-x-2">
-              <CheckboxControl />
-              <CheckboxLabel htmlFor="tshirt">I would like a hackathon T-shirt</CheckboxLabel>
-            </Checkbox>
-          </div> */}
         </TabsContent>
         <TabsContent value="search" class="space-y-4">
           <h3 className="text-lg font-medium">Looking for a team</h3>
@@ -1308,6 +1264,10 @@ const App = () => {
                   const form = e.target;
                   if (!school()) {
                     alert("Please select a school.");
+                    return;
+                  }
+                  if (selfRegBlocked()) {
+                    alert("Self-registration is not available for " + selfRegBlocked().schoolLabel + ". Please contact your school administrator.");
                     return;
                   }
                   if (!major()) {
@@ -1506,6 +1466,22 @@ const App = () => {
               </a>
             </p>
           </div>
+
+          <Show when={categoryInfoOpen()}>
+            <Portal>
+              <div class="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setCategoryInfoOpen(false)}>
+                <div class="absolute inset-0 bg-black/50" />
+                <div class="relative bg-white border border-zinc-200 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <button class="absolute right-3 top-3 text-zinc-400 hover:text-zinc-600" onClick={() => setCategoryInfoOpen(false)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                  <h3 class="text-lg font-semibold text-zinc-900 mb-2">{categoryInfoData()?.label}</h3>
+                  {categoryInfoData()?.prize > 0 && <p class="text-sm font-medium text-green-600 mb-2">Prize: ${categoryInfoData()?.prize?.toLocaleString()}</p>}
+                  <p class="text-sm text-zinc-600 leading-relaxed">{categoryInfoData()?.description}</p>
+                </div>
+              </div>
+            </Portal>
+          </Show>
         </main>
       </Ui>
     </>
