@@ -401,20 +401,19 @@ const App = () => {
                 e.target.setSelectionRange(_pos, _pos);
                 e.target.focus();
               }}
-on:input={(e) => {
-  if (e.target._value !== undefined && e.target._value !== '') return;
-  const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
-  if (raw.length === 0) return;
-  e.target._value = raw;
-  e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
-    let final = '';
-    if (p1) final += `+1 (${p1})`;
-    if (p2) final += ` ${p2}`;
-    if (p3) final += `-${p3}`;
-    return final;
-  });
-}}
-/>
+              on:input={(e) => {
+                if (e.target._value !== undefined && e.target._value !== '') return;
+                const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
+                if (raw.length === 0) return;
+                e.target._value = raw;
+                e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
+                  let final = '';
+                  if (p1) final += `+1 (${p1})`;
+                  if (p2) final += ` ${p2}`;
+                  if (p3) final += `-${p3}`;
+                  return final;
+                });
+              }} />
             </TextFieldRoot>
           </div>
 
@@ -688,20 +687,19 @@ on:input={(e) => {
                         e.target.setSelectionRange(_pos, _pos);
                         e.target.focus();
                       }}
-on:input={(e) => {
-  if (e.target._value !== undefined && e.target._value !== '') return;
-  const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
-  if (raw.length === 0) return;
-  e.target._value = raw;
-  e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
-    let final = '';
-    if (p1) final += `+1 (${p1})`;
-    if (p2) final += ` ${p2}`;
-    if (p3) final += `-${p3}`;
-    return final;
-  });
-}}
-/>
+                      on:input={(e) => {
+                        if (e.target._value !== undefined && e.target._value !== '') return;
+                        const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
+                        if (raw.length === 0) return;
+                        e.target._value = raw;
+                        e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
+                          let final = '';
+                          if (p1) final += `+1 (${p1})`;
+                          if (p2) final += ` ${p2}`;
+                          if (p3) final += `-${p3}`;
+                          return final;
+                        });
+                      }} />
                     </TextFieldRoot>
                   </div>
                   <div className="space-y-2">
@@ -870,20 +868,19 @@ on:input={(e) => {
                           e.target.setSelectionRange(_pos, _pos);
                           e.target.focus();
                         }}
-on:input={(e) => {
-  if (e.target._value !== undefined && e.target._value !== '') return;
-  const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
-  if (raw.length === 0) return;
-  e.target._value = raw;
-  e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
-    let final = '';
-    if (p1) final += `+1 (${p1})`;
-    if (p2) final += ` ${p2}`;
-    if (p3) final += `-${p3}`;
-    return final;
-  });
-}}
-/>
+                        on:input={(e) => {
+                          if (e.target._value !== undefined && e.target._value !== '') return;
+                          const raw = e.target.value.replace(/\D/g, '').replace(/^1/, '').slice(0, 10);
+                          if (raw.length === 0) return;
+                          e.target._value = raw;
+                          e.target.value = raw.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
+                            let final = '';
+                            if (p1) final += `+1 (${p1})`;
+                            if (p2) final += ` ${p2}`;
+                            if (p3) final += `-${p3}`;
+                            return final;
+                          });
+                        }} />
                       </TextFieldRoot>
                     </div>
                     <div className="space-y-2">
