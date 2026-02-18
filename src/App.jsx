@@ -1232,9 +1232,6 @@ const App = () => {
                   location.href = '/';
                 }}>Home</Button>
               </CardTitle>
-              <CardDescription class="text-slate-300">
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Non iure saepe molestias ipsam nam dolor veniam officia. Incidunt, magni earum.
-              </CardDescription>
             </CardHeader>
             <CardContent class="pt-2 space-y-2">
               <div className="flex items-center justify-between flex-col gap-2 pb-2">
