@@ -1367,7 +1367,7 @@ const App = () => {
               {
                 section() < sections.length - 1 ? 
                   (showNext() ? <Button type="button" class="w-full sm:w-auto bg-[#f5b700] hover:bg-[#e5a700] text-black" onClick={() => {
-                    switchToSection(section() + 1);
+                    document.querySelector('form')?.requestSubmit();
                   }}>
                     Next
                   </Button> : <></>)
