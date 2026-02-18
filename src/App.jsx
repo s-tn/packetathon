@@ -273,7 +273,7 @@ const App = () => {
             <TextFieldRoot>
               <TextFieldLabel>Phone Number</TextFieldLabel>
               <TextField id="phone" type="tel" name="phone" value={data().screen0?.phone} placeholder="+1 (201) 555-0123" on:keydown={(e) => {
-                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Tab' || e.key === 'Enter') {
                   return;
                 }
                 e.preventDefault();
@@ -546,7 +546,7 @@ const App = () => {
                     <TextFieldRoot>
                       <TextFieldLabel htmlFor="parent1-phone">Phone Number</TextFieldLabel>
                       <TextField id="parent1-phone" type="tel" name="parent1-phone" required value={data().screen0?.['parent1-phone']} placeholder="+1 (201) 555-0123"  on:keydown={(e) => {
-                        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Tab' || e.key === 'Enter') {
                           return;
                         }
                         e.preventDefault();
@@ -556,7 +556,7 @@ const App = () => {
                         }
                         let pos = ((oField) => {
                           var iCaretPos = 0;
-                        
+
                           if (document.selection) {
                             oField.focus();
                             var oSel = document.selection.createRange();
@@ -622,11 +622,11 @@ const App = () => {
                           e.target._value = val;
                           e.target.value = val.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
                             let final = '';
-                            
+
                             if (p1) final += `+1 (${p1}) `;
                             if (p2) final += `${p2}`;
                             if (p3) final += `-${p3}`;
-                        
+
                             return final;
                           });
                         }
@@ -644,15 +644,15 @@ const App = () => {
                           }
                           val = val.slice(0, pos - 1) + val.slice(pos);
                           _pos -= 1;
-                          //if (val.length > 3 && pos === 
+                          //if (val.length > 3 && pos ===
                           e.target._value = val;
                           e.target.value = val.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
                             let final = '';
-                            
+
                             if (p1) final += `+1 (${p1})`;
                             if (p2) final += ` ${p2}`;
                             if (p3) final += `-${p3}`;
-                        
+
                             return final;
                           });
                         }
@@ -662,11 +662,11 @@ const App = () => {
                           e.target._value = val;
                           e.target.value = val.replace(/^([0-9]{1,3})([0-9]{1,3})?([0-9]{1,4})?$/, (match, p1, p2, p3) => {
                             let final = '';
-                            
+
                             if (p1) final += `+1 (${p1})`;
                             if (p2) final += ` ${p2}`;
                             if (p3) final += `-${p3}`;
-                        
+
                             return final;
                           });
                         }
@@ -714,7 +714,7 @@ const App = () => {
                       <TextFieldRoot>
                         <TextFieldLabel htmlFor="parentw-phone">Phone Number</TextFieldLabel>
                         <TextField id="parent2-phone" type="tel" name="parent2-phone" required value={data().screen0?.['parent2-phone']} placeholder="+1 (201) 555-0123"  on:keydown={(e) => {
-                          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Tab' || e.key === 'Enter') {
                             return;
                           }
                           e.preventDefault();
