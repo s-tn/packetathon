@@ -1229,7 +1229,7 @@ const App = () => {
               <CardTitle class="flex flex-row items-center py-2 gap-2">
                 Sign Up for the Hackathon
                 <Button variant="outline" class="ml-auto" onClick={() => {
-                  location.href = '/';
+                  location.href = 'https://bthackathon.com';
                 }}>Home</Button>
               </CardTitle>
             </CardHeader>
