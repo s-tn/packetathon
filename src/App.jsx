@@ -91,17 +91,13 @@ const App = () => {
 
   let _data = {
     screen0: null,
-    screen1: null,
-    screen2: null
+    screen1: null
   };
   if (localStorage.getItem('screen0')) {
     _data.screen0 = JSON.parse(localStorage.getItem('screen0'));
   }
   if (localStorage.getItem('screen1')) {
     _data.screen1 = JSON.parse(localStorage.getItem('screen1'));
-  }
-  if (localStorage.getItem('screen2')) {
-    _data.screen2 = JSON.parse(localStorage.getItem('screen2'));
   }
 
   const [ data, setData ] = createSignal(_data);
@@ -129,8 +125,6 @@ const App = () => {
   const [ major, setMajor ] = createSignal(data().screen0?.major);
   const [ grade, setGrade ] = createSignal(data().screen0?.grade);
   const [ shirt, setShirt ] = createSignal(data().screen0?.shirt);
-  const [ checkbox1, setCheckbox1 ] = createSignal(data().screen2?.checkbox1);
-  const [ checkbox2, setCheckbox2 ] = createSignal(data().screen2?.checkbox2);
   const [ checkbox3, setCheckbox3 ] = createSignal(null);
   const [ teamType, setTeamType ] = createSignal(data().screen1?.teamType || 'join');
   const [ memberCount, setMemberCount ] = createSignal(data().screen1?.teamInformation?.memberCount);
@@ -141,7 +135,7 @@ const App = () => {
     console.trace(value);
     _setShowNext(value);
   }
-  const [ unlocked, setUnlocked ] = createSignal([false, false, false, false, false].map((_, i) => i <= section()));
+  const [ unlocked, setUnlocked ] = createSignal([false, false, false, false].map((_, i) => i <= section()));
   const [ _teams, _setTeams ] = createSignal([]);
   const [ teams, setTeams ] = createSignal([]);
   const [ searchTeam, setSearchTeam ] = createSignal('');
@@ -220,7 +214,7 @@ const App = () => {
         return location.href = '/signup/dashboard'
       }
 
-      if (window.location.hash && parseInt(window.location.hash.replace('#', '')) === 5) {
+      if (window.location.hash && parseInt(window.location.hash.replace('#', '')) === 4) {
         location.hash = "";
         setFirstTab('signedup');
         setShowNext(false);
@@ -1116,39 +1110,6 @@ const App = () => {
         </TabsContent>
       </Tabs>
     </>,
-    () => <>
-      <div className="flex items-start space-x-2">
-        <Checkbox id="cb1" class="flex items-start space-x-2 mt-1" name="checkbox1" checked={checkbox1()} onChange={(e) => e ? setCheckbox1('on') : setCheckbox1(null)} required>
-          <div className="flex flex-col">
-            <div className="flex flex-row items-center gap-2 mb-1">
-              <CheckboxControl />
-              <CheckboxLabel className="font-medium">
-                Something
-              </CheckboxLabel>
-            </div>
-            <CheckboxDescription class="text-sm text-muted-foreground text-input">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Quo, consequuntur? Dignissimos quisquam voluptate praesentium at iusto hic aliquam deserunt rem exercitationem esse asperiores magni tenetur ipsum, debitis aspernatur, culpa corrupti reiciendis dicta dolores nesciunt ut porro autem! Vitae, pariatur provident facilis numquam molestiae non nulla dolor. Cum natus facilis voluptates.
-            </CheckboxDescription>
-          </div>
-        </Checkbox>
-      </div>
-
-      <div className="flex items-start space-x-2">
-        <Checkbox id="cb2" class="flex items-start space-x-2 mt-1" name="checkbox2" checked={checkbox2()} onChange={(e) => e ? setCheckbox2('on') : setCheckbox2(null)} required>
-          <div className="flex flex-col">
-            <div className="flex flex-row items-center gap-2 mb-1">
-              <CheckboxControl />
-              <CheckboxLabel className="font-medium">
-                Something else
-              </CheckboxLabel>
-            </div>
-            <CheckboxDescription class="text-sm text-muted-foreground text-input">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Asperiores quasi quae aliquid assumenda dolor non accusantium reprehenderit facere quam beatae, odio ipsum quaerat, dicta odit labore harum repudiandae ipsa. Voluptatum soluta magni libero quo vitae, cumque repudiandae quaerat voluptatem nemo quibusdam, sequi quas quam modi necessitatibus illo consequatur quis reprehenderit.
-            </CheckboxDescription>
-          </div>
-        </Checkbox>
-      </div>
-    </>,
     () => <div className="space-y-4">
       <h3 className="text-lg font-medium">Review Registration</h3>
       <Card>
@@ -1192,11 +1153,6 @@ const App = () => {
             </>
           )}
         </CardContent>
-        <Separator />
-        <CardContent class="pt-6 space-y-2">
-          <p><strong>Checkbox 1:</strong> {checkbox1() ? 'Accepted' : 'Not Accepted'}</p>
-          <p><strong>Checkbox 2:</strong> {checkbox2() ? 'Accepted' : 'Not Accepted'}</p>
-        </CardContent>
       </Card>
 
       <div className="flex items-center space-x-2">
@@ -1236,23 +1192,20 @@ const App = () => {
             <CardContent class="pt-2 space-y-2">
               <div className="flex items-center justify-between flex-col gap-2 pb-2">
                 <ToggleGroup value={section()} class="w-full flex justify-between">
-                  <ToggleGroupItem value="0" class="flex-1" aria-label="Toggle bold" checked={section() <= 0} onClick={() => switchToSection(0)} disabled={!unlocked()[0]}>
+                  <ToggleGroupItem value="0" class="flex-1" aria-label="Personal" checked={section() <= 0} onClick={() => switchToSection(0)} disabled={!unlocked()[0]}>
                     Personal
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="1" class="flex-1" aria-label="Toggle italic" checked={section() <= 1} onClick={() => switchToSection(1)} disabled={!unlocked()[1]}>
+                  <ToggleGroupItem value="1" class="flex-1" aria-label="Team" checked={section() <= 1} onClick={() => switchToSection(1)} disabled={!unlocked()[1]}>
                     Team
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="2" class="flex-1" aria-label="Toggle strikethrough" checked={section() <= 2} onClick={() => switchToSection(2)} disabled={!unlocked()[2]}>
-                    Legal
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="3" class="flex-1" aria-label="Toggle underline" checked={section() <= 3} onClick={() => switchToSection(3)} disabled={!unlocked()[3]}>
+                  <ToggleGroupItem value="2" class="flex-1" aria-label="Review" checked={section() <= 2} onClick={() => switchToSection(2)} disabled={!unlocked()[2]}>
                     Review
-                  </ToggleGroupItem>   
-                  <ToggleGroupItem value="4" class="flex-1" aria-label="Toggle underline" checked={section() <= 4} onClick={() => switchToSection(4)} disabled={!unlocked()[4]}>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="3" class="flex-1" aria-label="Account" checked={section() <= 3} onClick={() => switchToSection(3)} disabled={!unlocked()[3]}>
                     Account
                   </ToggleGroupItem>
                 </ToggleGroup>
-                <Progress value={[10, 30, 50, 70, 90][section()]} class="w-full" />
+                <Progress value={[10, 35, 65, 90][section()]} class="w-full" />
               </div>
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -1342,26 +1295,12 @@ const App = () => {
                       _data.screen1 = JSON.parse(localStorage.getItem('screen1'));
                       setData(_data);
                       break;
-                    case 2:
-                      const formData3 = Object.fromEntries(new FormData(form));
-                      if (!localStorage.getItem('screen2')) {
-                        localStorage.setItem('screen2', JSON.stringify({}));
-                      }
-                      localStorage.setItem('screen2', JSON.stringify(
-                        {
-                          ...JSON.parse(localStorage.getItem('screen2')),
-                          ...formData3
-                        }
-                      ));
-                      _data.screen2 = JSON.parse(localStorage.getItem('screen2'));
-                      setData(_data);
-                      break;
                   }
                   setUnlocked(unlocked().map((_, i) => i <= section() + 1));
 
                   if (section() === 0 && teamType() === 'join') {
                     setShowNext(false);
-                  } else if (location.hash !== '#5') {
+                  } else if (location.hash !== '#4') {
                     setShowNext(true);
                   }
 
@@ -1384,24 +1323,12 @@ const App = () => {
                   const registrationData = {
                     accountData,
                     screen0: JSON.parse(localStorage.getItem('screen0')),
-                    screen1: JSON.parse(localStorage.getItem('screen1')),
-                    screen2: JSON.parse(localStorage.getItem('screen2'))
+                    screen1: JSON.parse(localStorage.getItem('screen1'))
                   };
 
                   if (!checkbox3()) {
                     alert("Please accept the {checkbox3}.");
                     return;
-                  }
-
-                  if (registrationData.screen2) {
-                    if (!registrationData.screen2.checkbox1) {
-                      alert("Please accept the {checkbox1}.");
-                      return;
-                    }
-                    if (!registrationData.screen2.checkbox2) {
-                      alert("Please accept the {checkbox2}.");
-                      return;
-                    }
                   }
 
                   fetch('/api/register', {
@@ -1415,7 +1342,6 @@ const App = () => {
                       alert("Registration successful. Please check your email for confirmation.");
                       localStorage.removeItem('screen0');
                       localStorage.removeItem('screen1');
-                      localStorage.removeItem('screen2');
                       location.href = '/signup/dashboard';
                     } else {
                       alert("Registration failed. Please try again.");
