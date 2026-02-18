@@ -26,7 +26,7 @@ export default function Login() {
                 .then((res) => res.json())
                 .then((data) => {
                     if (!data.error) {
-                        alert("Password reset link sent to your email");
+                        alert("If an account with that email exists, a password reset link has been sent.");
                     } else {
                         alert("Error sending password reset link");
                     }
