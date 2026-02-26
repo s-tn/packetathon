@@ -1222,7 +1222,7 @@ const App = () => {
           <Card class="max-w-3xl mx-auto overflow-hidden">
             <CardHeader class="bg-[#1a2533] text-white">
               <CardTitle class="flex flex-row items-center py-2 gap-2">
-                Sign Up for the Hackathon
+                Sign Up for the BT Hackathon
                 <Button variant="outline" class="ml-auto" onClick={() => {
                   location.href = 'https://bthackathon.com';
                 }}>Home</Button>
