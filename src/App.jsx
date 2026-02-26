@@ -470,9 +470,9 @@ const App = () => {
               </Select>
             </div>
             {selfRegBlocked() && (
-              <div class="col-span-2 p-4 rounded-lg border border-amber-500/50 bg-amber-900/20">
-                <p class="font-semibold text-amber-300">Registration Managed by School</p>
-                <p class="text-sm text-amber-200/80 mt-1">
+              <div class="col-span-2 p-4 rounded-lg border border-amber-500/75 bg-transparent">
+                <p class="font-semibold text-amber-500/80">Registration Managed by School</p>
+                <p class="text-sm text-amber-400/80 mt-1">
                   Registration for {selfRegBlocked().schoolLabel} is managed by your school administrators. Please contact {selfRegBlocked().adminContacts} to register.
                 </p>
               </div>
