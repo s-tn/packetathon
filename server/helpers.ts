@@ -16,16 +16,14 @@ export function compileParents(screen0: any) {
   return parents;
 }
 
-export async function createRegistration({ userId, screen1, screen2 }: { userId: number; screen1: any; screen2: any }) {
+export async function createRegistration({ userId, screen1, tx = prisma }: { userId: number; screen1: any; tx?: any }) {
   try {
-    if (screen1 === undefined || screen2 === undefined) {
-      throw new Error('Screen1 and Screen2 are required');
+    if (screen1 === undefined) {
+      throw new Error('Screen1 is required');
     }
 
-    console.log('ugƒhregb')
-
     if (screen1.teamType === 'create') {
-      const team = await prisma.team.create({
+      const team = await tx.team.create({
         data: {
           name: screen1['team-name'],
           project: screen1['project-idea'],
@@ -41,7 +39,7 @@ export async function createRegistration({ userId, screen1, screen2 }: { userId:
 
       console.log('Team created:', team);
 
-      const registration = await prisma.registration.create({
+      const registration = await tx.registration.create({
         data: {
           userId,
           teamId: team.id
@@ -50,7 +48,7 @@ export async function createRegistration({ userId, screen1, screen2 }: { userId:
 
       return registration;
     } else if (screen1.teamType === 'join') {
-      const team = await prisma.team.findUnique({
+      const team = await tx.team.findUnique({
         where: {
           id: screen1.teamInformation.id,
         },
@@ -65,14 +63,14 @@ export async function createRegistration({ userId, screen1, screen2 }: { userId:
       if (team.members.length >= parseInt(team.maxSize)) {
         throw new Error('Team is full');
       }
-      const registration = await prisma.registration.create({
+      const registration = await tx.registration.create({
         data: {
           userId,
           teamId: team.id,
           status: 0
         },
       });
-      await prisma.request.create({
+      await tx.request.create({
         data: {
           userId,
           teamId: team.id,
@@ -81,7 +79,7 @@ export async function createRegistration({ userId, screen1, screen2 }: { userId:
       console.log('Registration created:', registration);
       return registration;
     } else {
-      const registration = await prisma.registration.create({
+      const registration = await tx.registration.create({
         data: {
           userId,
           teamId: null

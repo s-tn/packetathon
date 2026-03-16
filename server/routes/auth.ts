@@ -41,7 +41,7 @@ const routes: RouteDefinition[] = [
     handler: async (req, res) => {
       if (req.method === 'POST') {
         try {
-          const { accountData, screen0, screen1, screen2 } = req.body;
+          const { accountData, screen0, screen1 } = req.body;
 
           const { name, email, password } = accountData;
           const phone = screen0['phone'];
@@ -71,25 +71,35 @@ const routes: RouteDefinition[] = [
 
           const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-          const newUser = await prisma.user.create({
-            data: {
-              name,
-              fname: screen0['first-name'],
-              lname: screen0['last-name'],
-              parents: JSON.stringify(compileParents(screen0)),
-              email,
-              grade: screen0['grade'].value,
-              school: screen0['school'].value,
-              major: screen0['major'].value,
-              shirt: screen0['shirt'].value,
-              phone,
-              verificationCode,
-              verified: false,
-              verificationCodeExpiry: new Date(Date.now() + 60 * 60 * 1000),
-              resetPasswordToken: null,
-              resetPasswordTokenExpiry: null,
-              password: hashedPassword,
-            },
+          const { newUser, registration } = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+              data: {
+                name,
+                fname: screen0['first-name'],
+                lname: screen0['last-name'],
+                parents: JSON.stringify(compileParents(screen0)),
+                email,
+                grade: screen0['grade'].value,
+                school: screen0['school'].value,
+                major: screen0['major'].value,
+                shirt: screen0['shirt'].value,
+                phone,
+                verificationCode,
+                verified: false,
+                verificationCodeExpiry: new Date(Date.now() + 60 * 60 * 1000),
+                resetPasswordToken: null,
+                resetPasswordTokenExpiry: null,
+                password: hashedPassword,
+              },
+            });
+
+            const registration = await createRegistration({
+              userId: newUser.id,
+              screen1,
+              tx,
+            });
+
+            return { newUser, registration };
           });
 
           await sgMail.send({
@@ -104,12 +114,6 @@ const routes: RouteDefinition[] = [
             console.log('Email sent');
           }).catch((error) => {
             console.error('Error sending email:', error);
-          });
-
-          const registration = await createRegistration({
-            userId: newUser.id,
-            screen1,
-            screen2,
           });
 
           console.log('Registration:', registration);
