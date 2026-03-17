@@ -75,6 +75,7 @@ const routes: RouteDefinition[] = [
             const registration = await createRegistration({
               userId: existingUser.id,
               screen1,
+              host: `${req.protocol}://${req.headers['host']}`,
             });
             console.log('Completed orphaned registration:', registration);
             req.session.userId = existingUser.id;
@@ -113,6 +114,7 @@ const routes: RouteDefinition[] = [
               userId: newUser.id,
               screen1,
               tx,
+              host: `${req.protocol}://${req.headers['host']}`,
             });
 
             return { newUser, registration };

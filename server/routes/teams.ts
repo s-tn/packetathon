@@ -169,7 +169,26 @@ const routes: RouteDefinition[] = [
           userId: req.session.userId,
           teamId,
         },
-      }).then(() => {
+      }).then(async () => {
+        // Notify team leader of join request
+        const leader = await prisma.user.findUnique({ where: { id: team.leaderId } });
+        if (leader) {
+          sgMail.send({
+            from: SEND_EMAIL,
+            to: leader.email,
+            templateId: 'd-7dc82929d5784cd9b53d237f14ad5d0f',
+            dynamicTemplateData: {
+              name: leader.fname || leader.name,
+              requesterName: user!.name,
+              teamName: team.name,
+              url: `${req.protocol}://${req.headers['host']}/signup/dashboard/requests`,
+            },
+          }).then(() => {
+            console.log('Join request notification sent to', leader.email);
+          }).catch((error) => {
+            console.error('Error sending join request notification:', error);
+          });
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({}));
       }).catch(err => {

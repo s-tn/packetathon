@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { sgMail, SEND_EMAIL } from './mail';
 
 export function compileParents(screen0: any) {
   const parents: any[] = [];
@@ -16,7 +17,7 @@ export function compileParents(screen0: any) {
   return parents;
 }
 
-export async function createRegistration({ userId, screen1, tx = prisma }: { userId: number; screen1: any; tx?: any }) {
+export async function createRegistration({ userId, screen1, tx = prisma, host }: { userId: number; screen1: any; tx?: any; host?: string }) {
   try {
     if (screen1 === undefined) {
       throw new Error('Screen1 is required');
@@ -76,6 +77,28 @@ export async function createRegistration({ userId, screen1, tx = prisma }: { use
           teamId: team.id,
         },
       });
+      // Notify team leader of join request (fire-and-forget, outside transaction)
+      if (host) {
+        const leader = await prisma.user.findUnique({ where: { id: team.leaderId } });
+        const requester = await prisma.user.findUnique({ where: { id: userId } });
+        if (leader && requester) {
+          sgMail.send({
+            from: SEND_EMAIL,
+            to: leader.email,
+            templateId: 'd-7dc82929d5784cd9b53d237f14ad5d0f',
+            dynamicTemplateData: {
+              name: leader.fname || leader.name,
+              requesterName: requester.name,
+              teamName: team.name,
+              url: `${host}/signup/dashboard/requests`,
+            },
+          }).then(() => {
+            console.log('Join request notification sent to', leader.email);
+          }).catch((error) => {
+            console.error('Error sending join request notification:', error);
+          });
+        }
+      }
       console.log('Registration created:', registration);
       return registration;
     } else {
