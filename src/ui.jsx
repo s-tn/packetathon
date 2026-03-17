@@ -40,7 +40,7 @@ const Ui = (props) => {
                       </div>
                     </div>
                     <a href="/donate" class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white ">Donate</a>
-                    <a href="/contact" class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white ">Contact</a>
+                    <a href="mailto:julbry26@bergen.org" class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white ">Contact</a>
                     <a href="/signup" class="rounded-md px-3 py-2 text-sm font-medium text-gray-300 bg-gray-900 hover:text-white ">Register</a>
                   </div>
                 </div>

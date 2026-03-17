@@ -62,8 +62,24 @@ const routes: RouteDefinition[] = [
           });
 
           if (existingUser) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'User already exists' }));
+            // Check if this is an orphaned user (created but no registration)
+            const existingRegistration = await prisma.registration.findFirst({
+              where: { userId: existingUser.id },
+            });
+            if (existingRegistration) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'User already exists' }));
+              return;
+            }
+            // Orphaned user — complete their registration
+            const registration = await createRegistration({
+              userId: existingUser.id,
+              screen1,
+            });
+            console.log('Completed orphaned registration:', registration);
+            req.session.userId = existingUser.id;
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ user: existingUser }));
             return;
           }
 

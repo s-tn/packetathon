@@ -1383,7 +1383,7 @@ const App = () => {
                       localStorage.removeItem('screen1');
                       location.href = '/signup/dashboard';
                     } else {
-                      alert("Registration failed. Please try again.");
+                      alert(data.error || "Registration failed. Please try again.");
                     }
                   });
                 }
@@ -1423,7 +1423,7 @@ const App = () => {
           <div className="mt-8 text-center">
             <p className="text-muted-foreground">
               Questions?{" "}
-              <a href="/contact" className="text-[#f5b700] hover:underline">
+              <a href="mailto:julbry26@bergen.org" className="text-[#f5b700] hover:underline">
                 Contact us
               </a>
             </p>
