@@ -140,7 +140,7 @@ const App = () => {
   const [ teams, setTeams ] = createSignal([]);
   const [ searchTeam, setSearchTeam ] = createSignal('');
   const [ joinRequest, setJoinRequest ] = createSignal(null);
-  const [ firstTab, setFirstTab ] = createSignal('signup');
+  const [ mode, setMode ] = createSignal(null); // null = landing, "register", "login"
   const [ selfRegBlocked, setSelfRegBlocked ] = createSignal(null);
 
   // Check self-registration when school changes
@@ -193,7 +193,7 @@ const App = () => {
 
     if (i === 1 && teamType() === 'join') {
       setShowNext(false);
-    } else if (firstTab() === 'signup') {
+    } else {
       setShowNext(true);
     }
 
@@ -202,11 +202,6 @@ const App = () => {
     window.scrollTo(0, 0);
   }
 
-  createEffect(() => {
-    if (section() === 0 && firstTab() === 'signedup') {
-      setShowNext(false);
-    }
-  })
 
   createEffect(() => {
     fetch('/api/check-login').then(res => res.json()).then(data => {
@@ -214,10 +209,17 @@ const App = () => {
         return location.href = '/signup/dashboard'
       }
 
+      // Auto-detect returning users
       if (window.location.hash && parseInt(window.location.hash.replace('#', '')) === 4) {
         location.hash = "";
-        setFirstTab('signedup');
-        setShowNext(false);
+        setMode('login');
+        return;
+      }
+
+      if (localStorage.getItem('screen0')) {
+        // User has previous registration data — likely a returning user
+        setMode('login');
+        return;
       }
 
       switchToSection(window.location.hash ? parseInt(window.location.hash.replace('#', '')) : 0);
@@ -232,20 +234,7 @@ const App = () => {
 
   const sections = [
     () => <>
-      <Tabs defaultValue="signup" class="w-full" onChange={(e) => {
-        setFirstTab(e);
-        if (e === 'signedup') {
-          setShowNext(false);
-        } else {
-          setShowNext(true);
-        }
-      }} value={firstTab()}>
-        <TabsList>
-          <TabsTrigger value="signup">New Registration</TabsTrigger>
-          <TabsTrigger value="signedup">Already Registered?</TabsTrigger>
-          <TabsIndicator />
-        </TabsList>
-        <TabsContent value="signup" class="space-y-4">
+      <div class="space-y-4">
           <h3 className="text-lg font-medium">Personal Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -907,11 +896,7 @@ const App = () => {
               
             </div>
           </div>
-        </TabsContent>
-        <TabsContent value="signedup" class="space-y-4">
-          <Login />
-        </TabsContent>
-      </Tabs>
+      </div>
     </>,
     () => <>
       <Tabs defaultValue="join" class="w-full" onChange={(e) => {
@@ -1219,206 +1204,269 @@ const App = () => {
     <>
       <Ui>
         <main className="container mx-auto py-8 px-4">
-          <Card class="max-w-3xl mx-auto overflow-hidden">
-            <CardHeader class="bg-[#1a2533] text-white">
-              <CardTitle class="flex flex-row items-center py-2 gap-2">
-                Sign Up for the BT Hackathon
-                <Button variant="outline" class="ml-auto" onClick={() => {
-                  location.href = 'https://bthackathon.com';
-                }}>Home</Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent class="pt-2 space-y-2">
-              <div className="flex items-center justify-between flex-col gap-2 pb-2">
-                <ToggleGroup value={section()} class="w-full flex justify-between">
-                  <ToggleGroupItem value="0" class="flex-1" aria-label="Personal" checked={section() <= 0} onClick={() => switchToSection(0)} disabled={!unlocked()[0]}>
-                    Personal
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" class="flex-1" aria-label="Team" checked={section() <= 1} onClick={() => switchToSection(1)} disabled={!unlocked()[1]}>
-                    Team
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="2" class="flex-1" aria-label="Review" checked={section() <= 2} onClick={() => switchToSection(2)} disabled={!unlocked()[2]}>
-                    Review
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="3" class="flex-1" aria-label="Account" checked={section() <= 3} onClick={() => switchToSection(3)} disabled={!unlocked()[3]}>
-                    Account
-                  </ToggleGroupItem>
-                </ToggleGroup>
-                <Progress value={[10, 35, 65, 90][section()]} class="w-full" />
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                if (section() < sections.length - 1) {
-                  // Validate the form
-                  const form = e.target;
-                  if (!school()) {
-                    alert("Please select a school.");
-                    return;
-                  }
-                  if (selfRegBlocked()) {
-                    alert("Self-registration is not available for " + selfRegBlocked().schoolLabel + ". Please contact your school administrator.");
-                    return;
-                  }
-                  if (!major()) {
-                    alert("Please select a major.");
-                    return;
-                  }
-                  if (!grade()) {
-                    alert("Please select a grade.");
-                    return;
-                  }
-                  switch(section()) {
-                    case 0:
-                      const formData = Object.fromEntries(new FormData(form));
-                      formData.school = school();
-                      formData.major = major();
-                      formData.shirt = shirt();
-                      formData.grade = grade();
-                      formData.parents = parents();
-                      if (!localStorage.getItem('screen0')) {
-                        localStorage.setItem('screen0', JSON.stringify({}));
-                      }
-                      localStorage.setItem('screen0', JSON.stringify(
-                        {
-                          ...JSON.parse(localStorage.getItem('screen0')),
-                          ...formData
-                        }
-                      ));
-                      _data.screen0 = JSON.parse(localStorage.getItem('screen0'));
-                      setData(_data);
-                      break;
-                    case 1:
-                      const formData2 = Object.fromEntries(new FormData(form));
-                      formData2.teamType = teamType();
-                      formData2.teamInformation = {};
-                      if (formData2.teamType === 'create') {
-                        formData2.teamInformation['team-name'] = formData2['team-name'];
-                        formData2.teamInformation['project-idea'] = formData2['project-idea'];
-                        formData2.teamInformation['experience'] = experience();
-                        formData2.teamInformation['memberCount'] = memberCount();
-                        formData2.teamInformation['categories'] = categories();
-                        formData2.teamInformation.solo = false;
-                        formData2.teamInformation.looking = false;
-                      } else if (formData2.teamType === 'solo') {
-                        formData2.teamInformation['team-name'] = formData2['team-name'];
-                        formData2.teamInformation['project-idea'] = formData2['project-idea'];
-                        formData2.teamInformation['experience'] = experience();
-                        formData2.teamInformation['categories'] = categories();
-                        formData2.teamInformation['memberCount'] = 1;
-                        formData2.teamInformation.solo = true;
-                        formData2.teamInformation.looking = false;
-                      } else if (formData2.teamType === 'search') {
-                        formData2.teamInformation.looking = true;
-                      } else {
-                        if (!joinRequest()) {
-                          alert("Please select a team to join.");
-                          return;
-                        }
-                        formData2.teamInformation.solo = false;
-                        formData2.teamInformation.looking = false;
-                        formData2.teamInformation['id'] = joinRequest()?.id;
-                        delete formData2['team-name'];
-                      }
-
-                      console.log(formData2);
-
-                      if (!localStorage.getItem('screen1')) {
-                        localStorage.setItem('screen1', JSON.stringify({}));
-                      }
-                      localStorage.setItem('screen1', JSON.stringify(
-                        {
-                          ...JSON.parse(localStorage.getItem('screen1')),
-                          ...formData2
-                        }
-                      ));
-                      _data.screen1 = JSON.parse(localStorage.getItem('screen1'));
-                      setData(_data);
-                      break;
-                  }
-                  setUnlocked(unlocked().map((_, i) => i <= section() + 1));
-
-                  if (section() === 0 && teamType() === 'join') {
-                    setShowNext(false);
-                  } else if (location.hash !== '#4') {
-                    setShowNext(true);
-                  }
-
-                  setSection(section() + 1);
-                } else {
-                  const form = e.target;
-                  const accountData = Object.fromEntries(new FormData(form));
-
-                  if (accountData['password'] !== accountData['confirm-password']) {
-                    alert("Passwords do not match.");
-                    return;
-                  }
-
-                  accountData['name'] = `${data().screen0?.['first-name']} ${data().screen0?.['last-name']}`;
-                  accountData['school'] = school()?.label;
-                  accountData['email'] = data().screen0?.email;
-
-                  delete accountData['confirm-password'];
-
-                  const registrationData = {
-                    accountData,
-                    screen0: JSON.parse(localStorage.getItem('screen0')),
-                    screen1: JSON.parse(localStorage.getItem('screen1'))
-                  };
-
-                  if (!checkbox3()) {
-                    alert("Please accept the {checkbox3}.");
-                    return;
-                  }
-
-                  fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(registrationData)
-                  }).then(res => res.json()).then(data => {
-                    if (!data.error) {
-                      alert("Registration successful. Please check your email for confirmation.");
-                      localStorage.removeItem('screen0');
-                      localStorage.removeItem('screen1');
-                      location.href = '/signup/dashboard';
-                    } else {
-                      alert(data.error || "Registration failed. Please try again.");
-                    }
-                  });
-                }
-              }}>
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    {sections[section()]()}
-                  </div>
+          <Show when={mode() === null}>
+            <Card class="max-w-3xl mx-auto overflow-hidden">
+              <CardHeader class="bg-[#1a2533] text-white">
+                <CardTitle class="flex flex-row items-center py-2 gap-2">
+                  BT Hackathon
+                  <Button variant="outline" class="ml-auto" onClick={() => {
+                    location.href = 'https://bthackathon.com';
+                  }}>Home</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="py-10 px-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    class="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-zinc-200 hover:border-[#f5b700] hover:bg-[#f5b700]/5 transition-all text-center"
+                    onClick={() => setMode('register')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    <span class="text-lg font-semibold">New Registration</span>
+                    <span class="text-sm text-muted-foreground">Create your account for the BT Hackathon</span>
+                  </button>
+                  <button
+                    class={`flex flex-col items-center gap-3 p-6 rounded-lg border-2 transition-all text-center ${localStorage.getItem('screen0') ? 'border-[#f5b700] bg-[#f5b700]/5 hover:bg-[#f5b700]/10' : 'border-zinc-200 hover:border-[#f5b700] hover:bg-[#f5b700]/5'}`}
+                    onClick={() => setMode('login')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    <span class="text-lg font-semibold">Sign In</span>
+                    <span class="text-sm text-muted-foreground">Already have an account? Sign in to your dashboard</span>
+                    {localStorage.getItem('screen0') && (
+                      <span class="text-xs font-medium text-[#f5b700]">Welcome back</span>
+                    )}
+                  </button>
                 </div>
-              </form>
-            </CardContent>
-            <CardFooter class="flex flex-col sm:flex-row gap-4">
-              {
-                section() > 0 && (
-                  (showNext() ? <Button variant="outline" class="w-full sm:w-auto" onClick={() => switchToSection(section() - 1)}>
-                    Back
-                  </Button> : <></>)
-                )
-              }
-              {
-                section() < sections.length - 1 ? 
-                  (showNext() ? <Button type="button" class="w-full sm:w-auto bg-[#f5b700] hover:bg-[#e5a700] text-black" onClick={() => {
-                    document.querySelector('form')?.requestSubmit();
-                  }}>
-                    Next
-                  </Button> : <></>)
-                :
-                  <Button type="button" class="w-full sm:w-auto bg-[#f5b700] hover:bg-[#e5a700] text-black" onClick={() => {
-                    document.querySelector('form')?.requestSubmit();
-                  }}>
-                    Submit
-                  </Button>
-              }
-            </CardFooter>
-          </Card>
+              </CardContent>
+            </Card>
+          </Show>
+
+          <Show when={mode() === 'login'}>
+            <Card class="max-w-3xl mx-auto overflow-hidden">
+              <CardHeader class="bg-[#1a2533] text-white">
+                <CardTitle class="flex flex-row items-center py-2 gap-2">
+                  Sign In
+                  <Button variant="outline" class="ml-auto" onClick={() => {
+                    location.href = 'https://bthackathon.com';
+                  }}>Home</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="pt-6 space-y-4">
+                <Login />
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" onClick={() => setMode(null)}>
+                  Back
+                </Button>
+              </CardFooter>
+            </Card>
+          </Show>
+
+          <Show when={mode() === 'register'}>
+            <Card class="max-w-3xl mx-auto overflow-hidden">
+              <CardHeader class="bg-[#1a2533] text-white">
+                <CardTitle class="flex flex-row items-center py-2 gap-2">
+                  Sign Up for the BT Hackathon
+                  <Button variant="outline" class="ml-auto" onClick={() => {
+                    location.href = 'https://bthackathon.com';
+                  }}>Home</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="pt-2 space-y-2">
+                <div className="flex items-center justify-between flex-col gap-2 pb-2">
+                  <ToggleGroup value={section()} class="w-full flex justify-between">
+                    <ToggleGroupItem value="0" class="flex-1" aria-label="Personal" checked={section() <= 0} onClick={() => switchToSection(0)} disabled={!unlocked()[0]}>
+                      Personal
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="1" class="flex-1" aria-label="Team" checked={section() <= 1} onClick={() => switchToSection(1)} disabled={!unlocked()[1]}>
+                      Team
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="2" class="flex-1" aria-label="Review" checked={section() <= 2} onClick={() => switchToSection(2)} disabled={!unlocked()[2]}>
+                      Review
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="3" class="flex-1" aria-label="Account" checked={section() <= 3} onClick={() => switchToSection(3)} disabled={!unlocked()[3]}>
+                      Account
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  <Progress value={[10, 35, 65, 90][section()]} class="w-full" />
+                </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (section() < sections.length - 1) {
+                    // Validate the form
+                    const form = e.target;
+                    if (!school()) {
+                      alert("Please select a school.");
+                      return;
+                    }
+                    if (selfRegBlocked()) {
+                      alert("Self-registration is not available for " + selfRegBlocked().schoolLabel + ". Please contact your school administrator.");
+                      return;
+                    }
+                    if (!major()) {
+                      alert("Please select a major.");
+                      return;
+                    }
+                    if (!grade()) {
+                      alert("Please select a grade.");
+                      return;
+                    }
+                    switch(section()) {
+                      case 0:
+                        const formData = Object.fromEntries(new FormData(form));
+                        formData.school = school();
+                        formData.major = major();
+                        formData.shirt = shirt();
+                        formData.grade = grade();
+                        formData.parents = parents();
+                        if (!localStorage.getItem('screen0')) {
+                          localStorage.setItem('screen0', JSON.stringify({}));
+                        }
+                        localStorage.setItem('screen0', JSON.stringify(
+                          {
+                            ...JSON.parse(localStorage.getItem('screen0')),
+                            ...formData
+                          }
+                        ));
+                        _data.screen0 = JSON.parse(localStorage.getItem('screen0'));
+                        setData(_data);
+                        break;
+                      case 1:
+                        const formData2 = Object.fromEntries(new FormData(form));
+                        formData2.teamType = teamType();
+                        formData2.teamInformation = {};
+                        if (formData2.teamType === 'create') {
+                          formData2.teamInformation['team-name'] = formData2['team-name'];
+                          formData2.teamInformation['project-idea'] = formData2['project-idea'];
+                          formData2.teamInformation['experience'] = experience();
+                          formData2.teamInformation['memberCount'] = memberCount();
+                          formData2.teamInformation['categories'] = categories();
+                          formData2.teamInformation.solo = false;
+                          formData2.teamInformation.looking = false;
+                        } else if (formData2.teamType === 'solo') {
+                          formData2.teamInformation['team-name'] = formData2['team-name'];
+                          formData2.teamInformation['project-idea'] = formData2['project-idea'];
+                          formData2.teamInformation['experience'] = experience();
+                          formData2.teamInformation['categories'] = categories();
+                          formData2.teamInformation['memberCount'] = 1;
+                          formData2.teamInformation.solo = true;
+                          formData2.teamInformation.looking = false;
+                        } else if (formData2.teamType === 'search') {
+                          formData2.teamInformation.looking = true;
+                        } else {
+                          if (!joinRequest()) {
+                            alert("Please select a team to join.");
+                            return;
+                          }
+                          formData2.teamInformation.solo = false;
+                          formData2.teamInformation.looking = false;
+                          formData2.teamInformation['id'] = joinRequest()?.id;
+                          delete formData2['team-name'];
+                        }
+
+                        console.log(formData2);
+
+                        if (!localStorage.getItem('screen1')) {
+                          localStorage.setItem('screen1', JSON.stringify({}));
+                        }
+                        localStorage.setItem('screen1', JSON.stringify(
+                          {
+                            ...JSON.parse(localStorage.getItem('screen1')),
+                            ...formData2
+                          }
+                        ));
+                        _data.screen1 = JSON.parse(localStorage.getItem('screen1'));
+                        setData(_data);
+                        break;
+                    }
+                    setUnlocked(unlocked().map((_, i) => i <= section() + 1));
+
+                    if (section() === 0 && teamType() === 'join') {
+                      setShowNext(false);
+                    } else if (location.hash !== '#4') {
+                      setShowNext(true);
+                    }
+
+                    setSection(section() + 1);
+                  } else {
+                    const form = e.target;
+                    const accountData = Object.fromEntries(new FormData(form));
+
+                    if (accountData['password'] !== accountData['confirm-password']) {
+                      alert("Passwords do not match.");
+                      return;
+                    }
+
+                    accountData['name'] = `${data().screen0?.['first-name']} ${data().screen0?.['last-name']}`;
+                    accountData['school'] = school()?.label;
+                    accountData['email'] = data().screen0?.email;
+
+                    delete accountData['confirm-password'];
+
+                    const registrationData = {
+                      accountData,
+                      screen0: JSON.parse(localStorage.getItem('screen0')),
+                      screen1: JSON.parse(localStorage.getItem('screen1'))
+                    };
+
+                    if (!checkbox3()) {
+                      alert("Please accept the {checkbox3}.");
+                      return;
+                    }
+
+                    fetch('/api/register', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify(registrationData)
+                    }).then(res => res.json()).then(data => {
+                      if (!data.error) {
+                        alert("Registration successful. Please check your email for confirmation.");
+                        localStorage.removeItem('screen0');
+                        localStorage.removeItem('screen1');
+                        location.href = '/signup/dashboard';
+                      } else {
+                        alert(data.error || "Registration failed. Please try again.");
+                      }
+                    });
+                  }
+                }}>
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      {sections[section()]()}
+                    </div>
+                  </div>
+                </form>
+              </CardContent>
+              <CardFooter class="flex flex-col sm:flex-row gap-4">
+                {
+                  section() === 0 ? (
+                    <Button variant="outline" class="w-full sm:w-auto" onClick={() => setMode(null)}>
+                      Back
+                    </Button>
+                  ) : (
+                    (showNext() ? <Button variant="outline" class="w-full sm:w-auto" onClick={() => switchToSection(section() - 1)}>
+                      Back
+                    </Button> : <></>)
+                  )
+                }
+                {
+                  section() < sections.length - 1 ?
+                    (showNext() ? <Button type="button" class="w-full sm:w-auto bg-[#f5b700] hover:bg-[#e5a700] text-black" onClick={() => {
+                      document.querySelector('form')?.requestSubmit();
+                    }}>
+                      Next
+                    </Button> : <></>)
+                  :
+                    <Button type="button" class="w-full sm:w-auto bg-[#f5b700] hover:bg-[#e5a700] text-black" onClick={() => {
+                      document.querySelector('form')?.requestSubmit();
+                    }}>
+                      Submit
+                    </Button>
+                }
+              </CardFooter>
+            </Card>
+          </Show>
 
           <div className="mt-8 text-center">
             <p className="text-muted-foreground">
