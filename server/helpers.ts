@@ -79,8 +79,8 @@ export async function createRegistration({ userId, screen1, tx = prisma, host }:
       });
       // Notify team leader of join request (fire-and-forget, outside transaction)
       if (host) {
-        const leader = await prisma.user.findUnique({ where: { id: team.leaderId } });
-        const requester = await prisma.user.findUnique({ where: { id: userId } });
+        const leader = await tx.user.findUnique({ where: { id: team.leaderId } });
+        const requester = await tx.user.findUnique({ where: { id: userId } });
         if (leader && requester) {
           sgMail.send({
             from: SEND_EMAIL,
