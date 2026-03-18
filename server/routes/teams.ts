@@ -181,7 +181,7 @@ const routes: RouteDefinition[] = [
               name: leader.fname || leader.name,
               requesterName: user!.name,
               teamName: team.name,
-              url: `${req.protocol}://${req.headers['host']}/signup/dashboard/requests`,
+              url: `https://${req.headers['host']}/signup/dashboard/requests`,
             },
           }).then(() => {
             console.log('Join request notification sent to', leader.email);
