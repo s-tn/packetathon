@@ -295,7 +295,7 @@ const routes: RouteDefinition[] = [
           },
         });
 
-        const url = `${req.protocol}://${req.headers['host']}/signup/dashboard/reset/${btoa(resetToken)}?qcv=${btoa(user.email)}`;
+        const url = `https://${req.headers['host']}/signup/dashboard/reset/${btoa(resetToken)}?qcv=${btoa(user.email)}`;
 
         req.session.nextCode = new Date(Date.now() + 30 * 1000);
 
@@ -358,7 +358,7 @@ const routes: RouteDefinition[] = [
           },
         });
 
-        const url = `${req.protocol}://${req.headers['host']}/signup/dashboard/reset/${btoa(resetToken)}?qcv=${btoa(user.email)}`;
+        const url = `https://${req.headers['host']}/signup/dashboard/reset/${btoa(resetToken)}?qcv=${btoa(user.email)}`;
 
         req.session.nextCode = new Date(Date.now() + 30 * 1000);
 
