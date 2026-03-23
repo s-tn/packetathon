@@ -25,12 +25,26 @@ export default defineConfig({
           }
           next()
         })
+      },
+      configurePreviewServer(serve) {
+        serve.middlewares.use((req, res, next) => {
+          if (req.url.startsWith('/signup')) {
+            req.url = '/signup.html';
+          }
+          next()
+        })
       }
     }
   ],
   build: {
     target: 'esnext',
     polyfillDynamicImport: false,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        signup: resolve(__dirname, 'signup.html'),
+      },
+    },
   },
   resolve: {
     alias: {
