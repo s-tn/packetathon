@@ -23,6 +23,12 @@ const routes: RouteDefinition[] = [
             teams: {
               select: { id: true, name: true }
             },
+            registrations: {
+              select: { id: true, teamId: true, status: true }
+            },
+            requests: {
+              select: { id: true, teamId: true, team: { select: { name: true } } }
+            },
             schoolAdminAssignments: {
               include: { school: true }
             }

@@ -27,6 +27,11 @@ const AdminManage = (props) => {
     const [expandedTeamId, setExpandedTeamId] = createSignal(null);
     const [expandedSchoolId, setExpandedSchoolId] = createSignal(null);
     const [adminTeamLeader, setAdminTeamLeader] = createSignal(null);
+    const [filterTeamStatus, setFilterTeamStatus] = createSignal('all');
+    const [filterGrade, setFilterGrade] = createSignal('all');
+    const [sortColumn, setSortColumn] = createSignal('id');
+    const [sortDirection, setSortDirection] = createSignal('desc');
+    const [teamSearchQuery, setTeamSearchQuery] = createSignal('');
     const [editingCategoryId, setEditingCategoryId] = createSignal(null);
     const [editingSchoolId, setEditingSchoolId] = createSignal(null);
     const [teamSelectedCategories, setTeamSelectedCategories] = createSignal([]);
@@ -138,17 +143,69 @@ const AdminManage = (props) => {
         );
     };
 
+    const getTeamStatus = (u) => {
+        if (u.teams?.length > 0) return 'on-team';
+        if (u.requests?.length > 0) return 'looking';
+        return 'no-team';
+    };
+
+    const getRegStatus = (u) => {
+        const reg = u.registrations?.[0];
+        if (!reg) return null;
+        return reg.status; // 0=pending, 1=accepted, 2=rejected
+    };
+
+    const toggleSort = (col) => {
+        if (sortColumn() === col) {
+            setSortDirection(sortDirection() === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(col);
+            setSortDirection('asc');
+        }
+    };
+
     const filteredUsers = () => {
-        return users().filter(u => {
+        let result = users().filter(u => {
             const query = searchQuery().toLowerCase();
-            if (query && !u.name?.toLowerCase().includes(query) && !u.email?.toLowerCase().includes(query)) {
+            if (query && !u.name?.toLowerCase().includes(query) && !u.email?.toLowerCase().includes(query) && !u.teams?.[0]?.name?.toLowerCase().includes(query)) {
                 return false;
             }
             if (filterVerified() === 'yes' && !u.verified) return false;
             if (filterVerified() === 'no' && u.verified) return false;
             if (filterSchool() !== 'all' && u.school !== filterSchool()) return false;
+            if (filterGrade() !== 'all' && u.grade !== filterGrade()) return false;
+            const ts = filterTeamStatus();
+            if (ts !== 'all' && getTeamStatus(u) !== ts) return false;
             return true;
         });
+
+        const col = sortColumn();
+        const dir = sortDirection() === 'asc' ? 1 : -1;
+        result.sort((a, b) => {
+            let va, vb;
+            if (col === 'name') { va = a.name?.toLowerCase() || ''; vb = b.name?.toLowerCase() || ''; }
+            else if (col === 'email') { va = a.email?.toLowerCase() || ''; vb = b.email?.toLowerCase() || ''; }
+            else if (col === 'school') { va = a.school || ''; vb = b.school || ''; }
+            else if (col === 'grade') { va = a.grade || ''; vb = b.grade || ''; }
+            else if (col === 'team') { va = a.teams?.[0]?.name?.toLowerCase() || 'zzz'; vb = b.teams?.[0]?.name?.toLowerCase() || 'zzz'; }
+            else if (col === 'created') { va = a.createdAt || ''; vb = b.createdAt || ''; }
+            else { va = a.id; vb = b.id; }
+            if (va < vb) return -1 * dir;
+            if (va > vb) return 1 * dir;
+            return 0;
+        });
+        return result;
+    };
+
+    const filteredTeams = () => {
+        const query = teamSearchQuery().toLowerCase();
+        if (!query) return teams();
+        return teams().filter(t =>
+            t.name?.toLowerCase().includes(query) ||
+            t.project?.toLowerCase().includes(query) ||
+            t.leader?.name?.toLowerCase().includes(query) ||
+            t.members?.some(m => m.name?.toLowerCase().includes(query))
+        );
     };
 
     const fetchSchools = () => {
@@ -188,22 +245,30 @@ const AdminManage = (props) => {
                 <h2 class="text-2xl font-bold">Manage System</h2>
                 <Button onClick={() => props.setPage('/admin')}>Back</Button>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-zinc-100 border border-zinc-200 rounded-lg">
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-4 mb-6 p-4 bg-zinc-100 border border-zinc-200 rounded-lg">
                 <div class="text-center">
                     <div class="text-2xl font-bold text-zinc-900">{users().length}</div>
                     <div class="text-sm text-zinc-500">Total Users</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-2xl font-bold text-zinc-900">{users().filter(u => u.verified).length}</div>
+                    <div class="text-2xl font-bold text-green-700">{users().filter(u => u.verified).length}</div>
                     <div class="text-sm text-zinc-500">Verified</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-red-700">{users().filter(u => !u.verified).length}</div>
+                    <div class="text-sm text-zinc-500">Unverified</div>
                 </div>
                 <div class="text-center">
                     <div class="text-2xl font-bold text-zinc-900">{teams().length}</div>
                     <div class="text-sm text-zinc-500">Teams</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-2xl font-bold text-zinc-900">{users().filter(u => !u.verified).length}</div>
-                    <div class="text-sm text-zinc-500">Unverified</div>
+                    <div class="text-2xl font-bold text-blue-700">{users().filter(u => getTeamStatus(u) === 'on-team').length}</div>
+                    <div class="text-sm text-zinc-500">On Team</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-amber-700">{users().filter(u => getTeamStatus(u) === 'looking').length}</div>
+                    <div class="text-sm text-zinc-500">Looking</div>
                 </div>
             </div>
 
@@ -507,6 +572,18 @@ const AdminManage = (props) => {
                         </CardContent>
                     </Card>
 
+                    <div class="flex gap-3 mb-4">
+                        <TextFieldRoot class="flex-1">
+                            <TextField
+                                placeholder="Search teams by name, project, or member..."
+                                value={teamSearchQuery()}
+                                onInput={(e) => setTeamSearchQuery(e.target.value)}
+                                class="p-2"
+                            />
+                        </TextFieldRoot>
+                        <div class="text-sm text-zinc-500 self-center">{filteredTeams().length} of {teams().length} teams</div>
+                    </div>
+
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -514,17 +591,25 @@ const AdminManage = (props) => {
                                 <TableHead>Project</TableHead>
                                 <TableHead>Leader</TableHead>
                                 <TableHead>Size</TableHead>
+                                <TableHead>Requests</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <For each={teams()}>{(team) => (
+                            <For each={filteredTeams()}>{(team) => (
                                 <>
                                     <TableRow class="cursor-pointer" onClick={() => setExpandedTeamId(expandedTeamId() === team.id ? null : team.id)}>
                                         <TableCell class="font-medium">{team.name}</TableCell>
                                         <TableCell class="text-sm text-zinc-600 truncate max-w-[200px]">{team.project}</TableCell>
                                         <TableCell class="text-sm">{team.leader?.name || '-'}</TableCell>
                                         <TableCell class="text-sm">{team.members?.length || 0}/{team.maxSize}</TableCell>
+                                        <TableCell class="text-sm">
+                                            {team.requests?.length > 0 ? (
+                                                <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">{team.requests.length} pending</span>
+                                            ) : (
+                                                <span class="text-zinc-400">0</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell onClick={(e) => e.stopPropagation()}>
                                             <Button variant="destructive" size="sm" onClick={() => {
                                                 if (!confirm(`Delete team "${team.name}"?`)) return;
@@ -534,8 +619,20 @@ const AdminManage = (props) => {
                                     </TableRow>
                                     {expandedTeamId() === team.id && (
                                         <TableRow>
-                                            <TableCell colSpan={5} class="bg-zinc-50 border-b">
+                                            <TableCell colSpan={6} class="bg-zinc-50 border-b">
                                                 <div class="p-4 space-y-4">
+                                                    {team.requests?.length > 0 && (
+                                                        <div>
+                                                            <div class="text-sm text-zinc-500 font-medium mb-2">Pending Join Requests</div>
+                                                            <div class="space-y-1">
+                                                                <For each={team.requests}>{(req) => (
+                                                                    <div class="flex items-center justify-between py-1 px-2 rounded bg-amber-50 border border-amber-200">
+                                                                        <span class="text-sm">{req.user?.name} ({req.user?.id})</span>
+                                                                    </div>
+                                                                )}</For>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <div class="text-sm text-zinc-500 font-medium mb-2">Categories</div>
                                                         <CategoryPicker
@@ -618,10 +715,10 @@ const AdminManage = (props) => {
                         </CardContent>
                     </Card>
 
-                    <div class="flex flex-wrap gap-4 mb-4">
+                    <div class="flex flex-wrap gap-3 mb-4">
                         <TextFieldRoot class="flex-1 min-w-[200px]">
                             <TextField
-                                placeholder="Search by name or email..."
+                                placeholder="Search by name, email, or team..."
                                 value={searchQuery()}
                                 onInput={(e) => setSearchQuery(e.target.value)}
                                 class="p-2"
@@ -649,14 +746,46 @@ const AdminManage = (props) => {
                             </SelectTrigger>
                             <SelectContent />
                         </Select>
+                        <Select
+                            options={[{ value: 'all', label: 'All Teams' }, { value: 'on-team', label: 'On Team' }, { value: 'looking', label: 'Looking' }, { value: 'no-team', label: 'No Team' }]}
+                            optionValue="value" optionTextValue="label" value={filterTeamStatus()}
+                            onChange={(val) => setFilterTeamStatus(val?.value || 'all')}
+                            itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
+                        >
+                            <SelectTrigger class="w-[130px]">
+                                <SelectValue>{state => state.selectedOption()?.label || 'All Teams'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent />
+                        </Select>
+                        <Select
+                            options={[{ value: 'all', label: 'All Grades' }, { value: '9', label: 'Freshman' }, { value: '10', label: 'Sophomore' }, { value: '11', label: 'Junior' }, { value: '12', label: 'Senior' }]}
+                            optionValue="value" optionTextValue="label" value={filterGrade()}
+                            onChange={(val) => setFilterGrade(val?.value || 'all')}
+                            itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
+                        >
+                            <SelectTrigger class="w-[130px]">
+                                <SelectValue>{state => state.selectedOption()?.label || 'All Grades'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent />
+                        </Select>
                     </div>
+                    <div class="text-sm text-zinc-500 mb-2">{filteredUsers().length} of {users().length} users</div>
 
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>School</TableHead>
+                                <TableHead class="cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                                    Name {sortColumn() === 'name' && (sortDirection() === 'asc' ? '↑' : '↓')}
+                                </TableHead>
+                                <TableHead class="cursor-pointer select-none" onClick={() => toggleSort('email')}>
+                                    Email {sortColumn() === 'email' && (sortDirection() === 'asc' ? '↑' : '↓')}
+                                </TableHead>
+                                <TableHead class="cursor-pointer select-none" onClick={() => toggleSort('school')}>
+                                    School {sortColumn() === 'school' && (sortDirection() === 'asc' ? '↑' : '↓')}
+                                </TableHead>
+                                <TableHead class="cursor-pointer select-none" onClick={() => toggleSort('team')}>
+                                    Team {sortColumn() === 'team' && (sortDirection() === 'asc' ? '↑' : '↓')}
+                                </TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -668,7 +797,16 @@ const AdminManage = (props) => {
                                         <TableCell class="text-sm">{u.email}</TableCell>
                                         <TableCell class="text-sm">{u.school || '-'}</TableCell>
                                         <TableCell class="text-sm">
-                                            <div class="flex gap-1">
+                                            {u.teams?.[0] ? (
+                                                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">{u.teams[0].name}</span>
+                                            ) : u.requests?.length > 0 ? (
+                                                <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">Req: {u.requests[0].team?.name}</span>
+                                            ) : (
+                                                <span class="text-zinc-400 text-xs">None</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell class="text-sm">
+                                            <div class="flex gap-1 flex-wrap">
                                                 {u.admin && <span class="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Admin</span>}
                                                 {u.verified ? <span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">Verified</span> : <span class="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs">Unverified</span>}
                                                 {u.schoolAdminAssignments?.length > 0 && <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">School Admin</span>}
@@ -677,7 +815,7 @@ const AdminManage = (props) => {
                                     </TableRow>
                                     {expandedUserId() === u.id && (
                                         <TableRow>
-                                            <TableCell colSpan={4} class="bg-zinc-50 border-b">
+                                            <TableCell colSpan={5} class="bg-zinc-50 border-b">
                                                 <div class="p-4 space-y-4">
                                                     {/* User details */}
                                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
