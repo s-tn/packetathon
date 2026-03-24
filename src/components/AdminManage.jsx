@@ -155,6 +155,86 @@ const AdminManage = (props) => {
         return reg.status; // 0=pending, 1=accepted, 2=rejected
     };
 
+    const exportUsersCSV = () => {
+        const rows = filteredUsers();
+        const headers = ['Name', 'Email', 'Phone', 'School', 'Major', 'Grade', 'Shirt', 'Team', 'Team Status', 'Verified', 'Created'];
+        const csvRows = [headers.join(',')];
+        for (const u of rows) {
+            const teamStatus = getTeamStatus(u);
+            const teamName = u.teams?.[0]?.name || (u.requests?.[0]?.team?.name ? `Req: ${u.requests[0].team.name}` : '');
+            csvRows.push([
+                `"${(u.name || '').replace(/"/g, '""')}"`,
+                u.email,
+                u.phone || '',
+                u.school || '',
+                u.major || '',
+                u.grade || '',
+                u.shirt || '',
+                `"${teamName.replace(/"/g, '""')}"`,
+                teamStatus,
+                u.verified ? 'Yes' : 'No',
+                new Date(u.createdAt).toLocaleDateString(),
+            ].join(','));
+        }
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const exportTeamsCSV = () => {
+        const rows = filteredTeams();
+        const headers = ['Team', 'Project', 'Leader', 'Leader Email', 'Members', 'Size', 'Pending Requests', 'Categories'];
+        const csvRows = [headers.join(',')];
+        for (const t of rows) {
+            const cats = (() => { try { return JSON.parse(t.categories || '[]').map(c => c.label).join('; '); } catch { return ''; } })();
+            csvRows.push([
+                `"${(t.name || '').replace(/"/g, '""')}"`,
+                `"${(t.project || '').replace(/"/g, '""')}"`,
+                `"${(t.leader?.name || '').replace(/"/g, '""')}"`,
+                t.leader?.email || '',
+                `"${(t.members || []).map(m => m.name).join('; ')}"`,
+                `${t.members?.length || 0}/${t.maxSize}`,
+                t.requests?.length || 0,
+                `"${cats}"`,
+            ].join(','));
+        }
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `teams-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const bulkVerify = () => {
+        const unverified = filteredUsers().filter(u => !u.verified);
+        if (!unverified.length) { alert('No unverified users in current filter.'); return; }
+        if (!confirm(`Verify ${unverified.length} unverified user(s)?`)) return;
+        Promise.all(unverified.map(u =>
+            fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify', userId: u.id }) })
+        )).then(() => fetchUsers());
+    };
+
+    const schoolBreakdown = () => {
+        const breakdown = {};
+        for (const u of users()) {
+            const s = u.school || 'Unknown';
+            if (!breakdown[s]) breakdown[s] = { total: 0, verified: 0, onTeam: 0, looking: 0, noTeam: 0 };
+            breakdown[s].total++;
+            if (u.verified) breakdown[s].verified++;
+            const ts = getTeamStatus(u);
+            if (ts === 'on-team') breakdown[s].onTeam++;
+            else if (ts === 'looking') breakdown[s].looking++;
+            else breakdown[s].noTeam++;
+        }
+        return Object.entries(breakdown).sort((a, b) => b[1].total - a[1].total);
+    };
+
     const toggleSort = (col) => {
         if (sortColumn() === col) {
             setSortDirection(sortDirection() === 'asc' ? 'desc' : 'asc');
@@ -270,6 +350,34 @@ const AdminManage = (props) => {
                     <div class="text-2xl font-bold text-amber-700">{users().filter(u => getTeamStatus(u) === 'looking').length}</div>
                     <div class="text-sm text-zinc-500">Looking</div>
                 </div>
+            </div>
+
+            {/* School breakdown */}
+            <div class="mb-6">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>School</TableHead>
+                            <TableHead class="text-center">Total</TableHead>
+                            <TableHead class="text-center">Verified</TableHead>
+                            <TableHead class="text-center">On Team</TableHead>
+                            <TableHead class="text-center">Looking</TableHead>
+                            <TableHead class="text-center">No Team</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <For each={schoolBreakdown()}>{([school, data]) => (
+                            <TableRow>
+                                <TableCell class="font-medium">{schools().find(s => s.value === school)?.label || school}</TableCell>
+                                <TableCell class="text-center">{data.total}</TableCell>
+                                <TableCell class="text-center text-green-700">{data.verified}</TableCell>
+                                <TableCell class="text-center text-blue-700">{data.onTeam}</TableCell>
+                                <TableCell class="text-center text-amber-700">{data.looking}</TableCell>
+                                <TableCell class="text-center text-zinc-500">{data.noTeam}</TableCell>
+                            </TableRow>
+                        )}</For>
+                    </TableBody>
+                </Table>
             </div>
 
             {/* Tab bar - use .map() instead of <For> for static data */}
@@ -582,6 +690,7 @@ const AdminManage = (props) => {
                             />
                         </TextFieldRoot>
                         <div class="text-sm text-zinc-500 self-center">{filteredTeams().length} of {teams().length} teams</div>
+                        <Button size="sm" variant="outline" onClick={exportTeamsCSV}>Export CSV</Button>
                     </div>
 
                     <Table>
@@ -769,7 +878,17 @@ const AdminManage = (props) => {
                             <SelectContent />
                         </Select>
                     </div>
-                    <div class="text-sm text-zinc-500 mb-2">{filteredUsers().length} of {users().length} users</div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-sm text-zinc-500">{filteredUsers().length} of {users().length} users</div>
+                        <div class="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={bulkVerify}>
+                                Verify All ({filteredUsers().filter(u => !u.verified).length})
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={exportUsersCSV}>
+                                Export CSV
+                            </Button>
+                        </div>
+                    </div>
 
                     <Table>
                         <TableHeader>
