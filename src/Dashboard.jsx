@@ -1485,7 +1485,14 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent class="pt-6">
-                  { pages[page()]() }
+                  { (() => {
+                    const restricted = ['/create', '/join'];
+                    if (restricted.includes(page()) && (user().team || user().registration?.teamId)) {
+                      setPage('/');
+                      return pages['/']();
+                    }
+                    return pages[page()]();
+                  })() }
                 </CardContent>
               </Card>
             ) : (

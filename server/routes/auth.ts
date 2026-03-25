@@ -12,13 +12,9 @@ const routes: RouteDefinition[] = [
         try {
           const { email, password } = req.body;
 
-          console.log(email, password);
-
           const user = await prisma.user.findUnique({
             where: { email },
           });
-
-          console.log(user);
 
           if (!user || !(bcrypt.compareSync(password, user.password))) {
             res.writeHead(401, { 'Content-Type': 'application/json' });

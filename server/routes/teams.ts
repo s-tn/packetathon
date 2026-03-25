@@ -42,6 +42,13 @@ const routes: RouteDefinition[] = [
         res.end(JSON.stringify({ error: 'User not verified' }));
         return;
       }
+      // Check if user is already on a team
+      const existingTeam = await prisma.team.findFirst({ where: { members: { some: { id: user.id } } } });
+      if (existingTeam) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'You are already on a team' }));
+        return;
+      }
       // Check if student's school allows team creation
       const userSchool = await prisma.school.findUnique({ where: { value: user.school } });
       if (userSchool && !userSchool.allowTeamCreation && !user.admin) {
@@ -151,7 +158,7 @@ const routes: RouteDefinition[] = [
       });
       if (existingMember) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'User is already a member of the team' }));
+        res.end(JSON.stringify({ error: 'You are already on a team' }));
         return;
       }
       await prisma.registration.updateMany({
@@ -332,6 +339,11 @@ const routes: RouteDefinition[] = [
   {
     path: '/api/reject',
     handler: async (req, res) => {
+      if (!req.session.userId) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Not logged in' }));
+        return;
+      }
       const { id } = req.body;
       const request = await prisma.request.findFirst({
         where: {

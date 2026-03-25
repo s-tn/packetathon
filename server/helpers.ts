@@ -7,7 +7,6 @@ export function compileParents(screen0: any) {
 
   for (let i = 0; i < screen0.parents; i++) {
     const parent: any = {};
-    console.log(screen0);
     fields.forEach(([parse, field]) => {
       parent[field] = screen0[`parent${i + 1}-${parse}`];
     });
