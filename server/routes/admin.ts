@@ -198,7 +198,15 @@ const routes: RouteDefinition[] = [
             if (project !== undefined) updateData.project = project;
             if (maxSize !== undefined) updateData.maxSize = maxSize.toString();
             if (experience !== undefined) updateData.experience = experience;
-            if (categories !== undefined) updateData.categories = categories;
+            if (categories !== undefined) {
+              // Validate categories against database
+              try {
+                const cats = JSON.parse(categories || '[]');
+                const validCats = await prisma.category.findMany();
+                const validValues = new Set(validCats.map(c => c.value));
+                updateData.categories = JSON.stringify(cats.filter((c: any) => validValues.has(c.value)));
+              } catch { updateData.categories = '[]'; }
+            }
             await prisma.team.update({ where: { id: teamId }, data: updateData });
           } else if (action === 'add-member') {
             if (!teamId) return res.writeHead(400).end();

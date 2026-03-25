@@ -441,7 +441,7 @@ const Dashboard = () => {
             )}
 
             {/* Student with team */}
-            {!user().admin && !user().isSchoolAdmin && user().registration?.teamId && (
+            {!user().admin && !user().isSchoolAdmin && (user().team || user().registration?.teamId) && (
               <div className="w-full max-w-md space-y-3">
                 {user().team ? (
                   <Card class="text-left">
@@ -469,7 +469,7 @@ const Dashboard = () => {
             )}
 
             {/* Student without team */}
-            {!user().admin && !user().isSchoolAdmin && !user().registration?.teamId && (
+            {!user().admin && !user().isSchoolAdmin && !user().team && !user().registration?.teamId && (
               <div className="w-full max-w-md space-y-3">
                 {user().allowTeamCreation === false ? (
                   <Card class="text-left border-amber-600/30">

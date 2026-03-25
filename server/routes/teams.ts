@@ -2,6 +2,18 @@ import { prisma } from '../db';
 import { sgMail, SEND_EMAIL } from '../mail';
 import type { RouteDefinition } from '../types';
 
+async function filterValidCategories(categoriesJson: string): Promise<string> {
+  try {
+    const cats = JSON.parse(categoriesJson || '[]');
+    if (!Array.isArray(cats) || cats.length === 0) return '[]';
+    const validCats = await prisma.category.findMany();
+    const validValues = new Set(validCats.map(c => c.value));
+    return JSON.stringify(cats.filter((c: any) => validValues.has(c.value)));
+  } catch {
+    return '[]';
+  }
+}
+
 const routes: RouteDefinition[] = [
   {
     path: '/api/teams',
@@ -59,11 +71,12 @@ const routes: RouteDefinition[] = [
           return;
         }
       }
+      const validCategories = await filterValidCategories(categories);
       const team = await prisma.team.create({
         data: {
           name,
           project,
-          categories,
+          categories: validCategories,
           experience,
           maxSize: maxSize.toString(),
           leaderId: user.id,
@@ -634,12 +647,13 @@ const routes: RouteDefinition[] = [
         res.end(JSON.stringify({ error: 'Team size exceeds max size' }));
         return;
       }
+      const validEditCategories = await filterValidCategories(categories);
       await prisma.team.update({
         where: { id: team.id },
         data: {
           name,
           project,
-          categories,
+          categories: validEditCategories,
           experience,
           maxSize,
         },
