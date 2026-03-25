@@ -38,7 +38,10 @@ const routes: RouteDefinition[] = [
         res.end(JSON.stringify({ users }));
       } else if (req.method === 'POST') {
         const { action, userId, data } = req.body;
-        if (!userId) return res.writeHead(400).end();
+        if (!action) { res.writeHead(400).end(); return; }
+        if (!['import-students', 'import-teams'].includes(action) && (userId === undefined || userId === null)) {
+          res.writeHead(400).end(); return;
+        }
 
         try {
           if (action === 'delete') {
@@ -75,11 +78,12 @@ const routes: RouteDefinition[] = [
                 const existing = await prisma.user.findUnique({ where: { email: s.email } });
                 if (existing) { results.skipped++; results.errors.push(`${s.email}: already exists`); continue; }
                 const hashedPassword = await bcrypt.hash(s.password || 'hackathon2026', 5);
-                await prisma.user.create({
+                const userName = s.name || `${s.fname || ''} ${s.lname || ''}`.trim();
+                const newUser = await prisma.user.create({
                   data: {
-                    name: s.name || `${s.fname || ''} ${s.lname || ''}`.trim(),
-                    fname: s.fname || s.name?.split(' ')[0] || '',
-                    lname: s.lname || s.name?.split(' ').slice(1).join(' ') || '',
+                    name: userName,
+                    fname: s.fname || userName.split(' ')[0] || '',
+                    lname: s.lname || userName.split(' ').slice(1).join(' ') || '',
                     email: s.email,
                     phone: s.phone || '',
                     school: s.school || 'bt',
@@ -90,8 +94,28 @@ const routes: RouteDefinition[] = [
                     verified: true,
                     verificationCode: '000000',
                     verificationCodeExpiry: new Date(),
+                    resetPasswordToken: Math.random().toString(36).slice(2) + Date.now().toString(36),
                     parents: s.parents || '[]',
                   }
+                });
+                // Create registration and optionally assign to team
+                let teamId = null;
+                if (s.team) {
+                  const team = await prisma.team.findFirst({ where: { name: s.team } });
+                  if (team) {
+                    const memberCount = await prisma.user.count({ where: { teams: { some: { id: team.id } } } });
+                    if (memberCount < parseInt(team.maxSize)) {
+                      await prisma.team.update({ where: { id: team.id }, data: { members: { connect: { id: newUser.id } } } });
+                      teamId = team.id;
+                    } else {
+                      results.errors.push(`${s.email}: team "${s.team}" is full, registered without team`);
+                    }
+                  } else {
+                    results.errors.push(`${s.email}: team "${s.team}" not found, registered without team`);
+                  }
+                }
+                await prisma.registration.create({
+                  data: { userId: newUser.id, teamId, status: 1 }
                 });
                 results.created++;
               } catch (e: any) {
