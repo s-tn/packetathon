@@ -91,7 +91,7 @@ const AdminManage = (props) => {
             fetch('/api/admin/teams', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'import-teams', data: { teams: rows.map(r => ({ name: r.name || r.teamname, project: r.project || r.description || '', leaderEmail: r.leaderemail || r.leader || r.email, maxSize: r.maxsize || r.max || '4' })) } })
+                body: JSON.stringify({ action: 'import-teams', data: { teams: rows.map(r => ({ name: r.name || r.teamname, project: r.project || r.description || '', leaderEmail: r.leaderemail || r.leader || r.email, maxSize: r.maxsize || r.max || '4', memberEmails: r.members || r.memberemails || '' })) } })
             }).then(r => r.json()).then(d => {
                 setImportStatus({ type: 'success', message: `Created: ${d.created}, Skipped: ${d.skipped}${d.errors?.length ? '\n' + d.errors.join('\n') : ''}` });
                 fetchTeams();
@@ -671,7 +671,7 @@ const AdminManage = (props) => {
                             <CardTitle class="text-lg">Import Teams from CSV</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p class="text-sm text-zinc-500 mb-3">CSV columns: name, project, leaderEmail, maxSize</p>
+                            <p class="text-sm text-zinc-500 mb-3">CSV columns: name, project, leaderEmail, maxSize, members (semicolon-separated emails)</p>
                             <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-200 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                 Choose CSV File
@@ -769,26 +769,40 @@ const AdminManage = (props) => {
                                                             )}</For>
                                                         </div>
                                                     </div>
-                                                    {team.members.length < parseInt(team.maxSize) && (
-                                                        <div class="flex items-center gap-2">
-                                                            <Select
-                                                                options={users().filter(u => !u.admin && u.verified && !team.members.some(m => m.id === u.id))}
-                                                                optionValue="id"
-                                                                optionTextValue="name"
-                                                                placeholder="Add member..."
-                                                                onChange={(val) => {
-                                                                    if (!val) return;
-                                                                    fetch('/api/admin/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add-member', teamId: team.id, data: { userId: val.id } }) }).then(() => fetchTeams());
-                                                                }}
-                                                                itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.name}</SelectItem>}
-                                                            >
-                                                                <SelectTrigger class="w-[200px]">
-                                                                    <SelectValue>{state => state.selectedOption()?.name || 'Add member...'}</SelectValue>
-                                                                </SelectTrigger>
-                                                                <SelectContent />
-                                                            </Select>
-                                                        </div>
-                                                    )}
+                                                    {team.members.length < parseInt(team.maxSize) && (() => {
+                                                        const [memberSearch, setMemberSearch] = createSignal('');
+                                                        const candidates = () => {
+                                                            const q = memberSearch().toLowerCase();
+                                                            return users().filter(u => !u.admin && u.verified && !team.members.some(m => m.id === u.id) && (q ? (u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) : false));
+                                                        };
+                                                        return (
+                                                            <div class="relative">
+                                                                <TextFieldRoot>
+                                                                    <TextField
+                                                                        placeholder="Search to add member..."
+                                                                        value={memberSearch()}
+                                                                        onInput={(e) => setMemberSearch(e.target.value)}
+                                                                        class="p-2 w-[300px]"
+                                                                    />
+                                                                </TextFieldRoot>
+                                                                {memberSearch() && candidates().length > 0 && (
+                                                                    <div class="absolute z-50 mt-1 w-[300px] max-h-[200px] overflow-y-auto bg-white border border-zinc-200 rounded-lg shadow-lg">
+                                                                        <For each={candidates().slice(0, 20)}>{(u) => (
+                                                                            <button
+                                                                                type="button"
+                                                                                class="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 border-b border-zinc-50"
+                                                                                onClick={() => {
+                                                                                    fetch('/api/admin/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add-member', teamId: team.id, data: { userId: u.id } }) }).then(() => { fetchTeams(); setMemberSearch(''); });
+                                                                                }}
+                                                                            >
+                                                                                {u.name} <span class="text-zinc-400">({u.email})</span>
+                                                                            </button>
+                                                                        )}</For>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </TableCell>
                                         </TableRow>

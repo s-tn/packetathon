@@ -257,7 +257,7 @@ const routes: RouteDefinition[] = [
               try {
                 const leader = await prisma.user.findUnique({ where: { email: t.leaderEmail } });
                 if (!leader) { results.skipped++; results.errors.push(`${t.name}: leader ${t.leaderEmail} not found`); continue; }
-                await prisma.team.create({
+                const team = await prisma.team.create({
                   data: {
                     name: t.name,
                     project: t.project || '',
@@ -268,6 +268,22 @@ const routes: RouteDefinition[] = [
                     members: { connect: { id: leader.id } },
                   },
                 });
+                await prisma.registration.updateMany({
+                  where: { userId: leader.id, teamId: null },
+                  data: { teamId: team.id, status: 1 },
+                });
+                // Add additional members from semicolon-separated email list
+                if (t.memberEmails) {
+                  const emails = t.memberEmails.split(';').map((e: string) => e.trim()).filter(Boolean);
+                  for (const email of emails) {
+                    const member = await prisma.user.findUnique({ where: { email } });
+                    if (!member) { results.errors.push(`${t.name}: member ${email} not found`); continue; }
+                    const alreadyOnTeam = await prisma.team.findFirst({ where: { members: { some: { id: member.id } } } });
+                    if (alreadyOnTeam) { results.errors.push(`${t.name}: ${email} already on team "${alreadyOnTeam.name}"`); continue; }
+                    await prisma.team.update({ where: { id: team.id }, data: { members: { connect: { id: member.id } } } });
+                    await prisma.registration.updateMany({ where: { userId: member.id, teamId: null }, data: { teamId: team.id, status: 1 } });
+                  }
+                }
                 results.created++;
               } catch (e: any) {
                 results.errors.push(`${t.name}: ${e.message}`);
