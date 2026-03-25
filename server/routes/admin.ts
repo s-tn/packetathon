@@ -218,7 +218,12 @@ const routes: RouteDefinition[] = [
             }
             if (team.members.some(m => m.id === userId)) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              return res.end(JSON.stringify({ error: 'User already on team' }));
+              return res.end(JSON.stringify({ error: 'User already on this team' }));
+            }
+            const existingTeam = await prisma.team.findFirst({ where: { members: { some: { id: userId } } } });
+            if (existingTeam) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ error: `User is already on team "${existingTeam.name}"` }));
             }
             await prisma.team.update({
               where: { id: teamId },

@@ -67,13 +67,17 @@ const routes: RouteDefinition[] = [
               res.end(JSON.stringify({ error: 'User already exists' }));
               return;
             }
-            // Orphaned user — complete their registration
+            // Orphaned user — update their password and complete registration
+            const hashedOrphanPassword = await bcrypt.hash(password, 5);
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { password: hashedOrphanPassword },
+            });
             const registration = await createRegistration({
               userId: existingUser.id,
               screen1,
               host: `https://${req.headers['host']}`,
             });
-            console.log('Completed orphaned registration:', registration);
             req.session.userId = existingUser.id;
             res.writeHead(201, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ user: existingUser }));
@@ -420,9 +424,9 @@ const routes: RouteDefinition[] = [
             res.end(JSON.stringify({ error: 'Internal server error' }));
             return;
           }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({}));
         });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({}));
       }).catch(err => {
         console.error(err);
         res.writeHead(500, { 'Content-Type': 'application/json' });

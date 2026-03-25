@@ -398,6 +398,11 @@ const routes: RouteDefinition[] = [
   {
     path: '/api/cancel-request',
     handler: async (req, res) => {
+      if (!req.session.userId) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Not logged in' }));
+        return;
+      }
       const request = await prisma.request.findFirst({
         where: {
           userId: req.session.userId,
