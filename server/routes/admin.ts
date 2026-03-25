@@ -182,7 +182,14 @@ const routes: RouteDefinition[] = [
                 leaderId,
                 maxSize: (maxSize || '4').toString(),
                 experience: experience || 'beginner',
-                categories: categories || '[]',
+                categories: await (async () => {
+                  try {
+                    const cats = JSON.parse(categories || '[]');
+                    const validCats = await prisma.category.findMany();
+                    const validValues = new Set(validCats.map(c => c.value));
+                    return JSON.stringify(cats.filter((c: any) => validValues.has(c.value)));
+                  } catch { return '[]'; }
+                })(),
                 members: { connect: { id: leaderId } },
               },
             });
