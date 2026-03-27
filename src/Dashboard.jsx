@@ -1401,7 +1401,7 @@ const Dashboard = () => {
               <Button onClick={() => setPage('/team')}>Back</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              { user().team.requests?.length ? user().team.requests.filter(request => request.user.verified).map(request => (
+              { user().team.requests?.length ? user().team.requests.map(request => (
                 <Card class="w-auto md:col-span-1">
                   <CardHeader>
                     <CardTitle>{request.user.name}</CardTitle>
