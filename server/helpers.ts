@@ -33,7 +33,7 @@ export async function createRegistration({ userId, screen1, tx = prisma, host }:
             connect: { id: userId },
           },
           maxSize: screen1.teamInformation.memberCount.value.toString(),
-          categories: JSON.stringify(screen1.teamInformation.categories),
+          categories: JSON.stringify(screen1.teamInformation?.categories || []),
         },
       });
 

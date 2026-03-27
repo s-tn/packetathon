@@ -26,8 +26,9 @@ const routes: RouteDefinition[] = [
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ user }));
         } catch (error) {
+          console.error('Login error:', error);
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid request' }));
+          res.end(JSON.stringify({ error: 'Login failed. Please try again.' }));
         }
       }
     },
@@ -39,8 +40,44 @@ const routes: RouteDefinition[] = [
         try {
           const { accountData, screen0, screen1 } = req.body;
 
+          if (!accountData || !screen0 || !screen1) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Incomplete registration data. Please go back and fill out all steps.' }));
+            return;
+          }
+
           const { name, email, password } = accountData;
           const phone = screen0['phone'];
+
+          if (!email || !password || !name) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Name, email, and password are required.' }));
+            return;
+          }
+
+          if (!screen0['school']?.value && !screen0['school']) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Please select a school.' }));
+            return;
+          }
+
+          if (!screen0['grade']?.value) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Please select a grade.' }));
+            return;
+          }
+
+          if (!screen0['major']?.value) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Please select a major/track.' }));
+            return;
+          }
+
+          if (!screen0['shirt']?.value) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Please select a shirt size.' }));
+            return;
+          }
 
           // Check if school allows self-registration
           const schoolValue = screen0['school']?.value || screen0['school'];
@@ -134,15 +171,22 @@ const routes: RouteDefinition[] = [
             console.error('Error sending email:', error);
           });
 
-          console.log('Registration:', registration);
-
           req.session.userId = newUser.id;
           res.writeHead(201, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ user: newUser }));
-        } catch (error) {
-          console.log(error);
+        } catch (error: any) {
+          console.error('Registration error:', error);
+          let message = 'Registration failed. Please try again.';
+          if (error?.code === 'P2002') {
+            const field = error?.meta?.target?.[0];
+            if (field === 'email') message = 'An account with this email already exists.';
+            else if (field === 'phone') message = 'An account with this phone number already exists.';
+            else message = 'An account with this information already exists.';
+          } else if (error?.message?.includes('email')) {
+            message = 'Please enter a valid email address.';
+          }
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid request' }));
+          res.end(JSON.stringify({ error: message }));
         }
       }
     },
