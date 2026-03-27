@@ -121,6 +121,24 @@ const routes: RouteDefinition[] = [
             return;
           }
 
+          // Pre-validate team join before starting the transaction
+          if (screen1?.teamType === 'join' && screen1?.teamInformation?.id) {
+            const joinTeam = await prisma.team.findUnique({
+              where: { id: screen1.teamInformation.id },
+              include: { members: true },
+            });
+            if (!joinTeam) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Team not found.' }));
+              return;
+            }
+            if (joinTeam.members.length >= parseInt(joinTeam.maxSize)) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'That team is full and cannot accept new members.' }));
+              return;
+            }
+          }
+
           const hashedPassword = await bcrypt.hash(password, 5);
 
           const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
