@@ -185,6 +185,42 @@ const AdminManage = (props) => {
         URL.revokeObjectURL(url);
     };
 
+    const exportParentsCSV = () => {
+        const rows = filteredUsers();
+        const headers = ['Student Name', 'Student Email', 'Parent First Name', 'Parent Last Name', 'Parent Email', 'Parent Phone', 'Relationship'];
+        const csvRows = [headers.join(',')];
+        for (const u of rows) {
+            let parents = [];
+            try { parents = JSON.parse(u.parents || '[]'); } catch {}
+            if (parents.length === 0) {
+                csvRows.push([
+                    `"${(u.name || '').replace(/"/g, '""')}"`,
+                    u.email,
+                    '', '', '', '', '',
+                ].join(','));
+            } else {
+                for (const p of parents) {
+                    csvRows.push([
+                        `"${(u.name || '').replace(/"/g, '""')}"`,
+                        u.email,
+                        `"${(p.fname || '').replace(/"/g, '""')}"`,
+                        `"${(p.lname || '').replace(/"/g, '""')}"`,
+                        p.email || '',
+                        p.phone || '',
+                        `"${(p.relationship || '').replace(/"/g, '""')}"`,
+                    ].join(','));
+                }
+            }
+        }
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `parents-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const exportTeamsCSV = () => {
         const rows = filteredTeams();
         const headers = ['Team', 'Project', 'Leader', 'Leader Email', 'Members', 'Size', 'Pending Requests', 'Categories'];
@@ -900,6 +936,9 @@ const AdminManage = (props) => {
                             </Button>
                             <Button size="sm" variant="outline" onClick={exportUsersCSV}>
                                 Export CSV
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={exportParentsCSV}>
+                                Export Parents
                             </Button>
                         </div>
                     </div>
