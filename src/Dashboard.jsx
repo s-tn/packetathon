@@ -356,7 +356,7 @@ const Dashboard = () => {
         setPage('/');
         location.reload();
       } else {
-        alert('Error sending join request');
+        alert(data.error || 'Error sending join request');
         location.reload();
       }
     }).catch(err => {

@@ -176,8 +176,11 @@ const routes: RouteDefinition[] = [
           res.end(JSON.stringify({ user: newUser }));
         } catch (error: any) {
           console.error('Registration error:', error);
+          const knownErrors = ['Team is full', 'Team not found', 'Already on a team'];
           let message = 'Registration failed. Please try again.';
-          if (error?.code === 'P2002') {
+          if (knownErrors.some(e => error?.message?.includes(e))) {
+            message = error.message;
+          } else if (error?.code === 'P2002') {
             const field = error?.meta?.target?.[0];
             if (field === 'email') message = 'An account with this email already exists.';
             else if (field === 'phone') message = 'An account with this phone number already exists.';
