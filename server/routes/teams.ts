@@ -23,8 +23,9 @@ const routes: RouteDefinition[] = [
           members: true,
         },
       }).then(teams => {
+        const availableTeams = teams.filter(t => t.members.length < parseInt(t.maxSize));
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ teams }));
+        res.end(JSON.stringify({ teams: availableTeams }));
       }).catch(err => {
         console.error(err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
