@@ -21,14 +21,14 @@ const AdminManage = (props) => {
     const [ teams, setTeams ] = createSignal([]);
     const [activeTab, setActiveTab] = createSignal('schools');
     const [searchQuery, setSearchQuery] = createSignal('');
-    const [filterVerified, setFilterVerified] = createSignal('all');
-    const [filterSchool, setFilterSchool] = createSignal('all');
+    const [filterVerified, setFilterVerified] = createSignal([]);
+    const [filterSchool, setFilterSchool] = createSignal([]);
     const [expandedUserId, setExpandedUserId] = createSignal(null);
     const [expandedTeamId, setExpandedTeamId] = createSignal(null);
     const [expandedSchoolId, setExpandedSchoolId] = createSignal(null);
     const [adminTeamLeader, setAdminTeamLeader] = createSignal(null);
-    const [filterTeamStatus, setFilterTeamStatus] = createSignal('all');
-    const [filterGrade, setFilterGrade] = createSignal('all');
+    const [filterTeamStatus, setFilterTeamStatus] = createSignal([]);
+    const [filterGrade, setFilterGrade] = createSignal([]);
     const [sortColumn, setSortColumn] = createSignal('id');
     const [sortDirection, setSortDirection] = createSignal('desc');
     const [teamSearchQuery, setTeamSearchQuery] = createSignal('');
@@ -157,11 +157,38 @@ const AdminManage = (props) => {
 
     const exportUsersCSV = () => {
         const rows = filteredUsers();
-        const headers = ['Name', 'Email', 'Phone', 'School', 'Major', 'Grade', 'Shirt', 'Team', 'Team Status', 'Verified', 'Created'];
+        const parentHeaders = [];
+        for (let i = 1; i <= 4; i++) {
+            parentHeaders.push(`Parent ${i} Name`, `Parent ${i} Email`);
+        }
+        const catHeaders = [];
+        for (let i = 1; i <= 12; i++) {
+            catHeaders.push(`Category ${i}`);
+        }
+        const headers = ['Name', 'Email', 'Phone', 'School', 'Major', 'Grade', 'Shirt', 'Team', 'Team Status', 'Verified', 'Created', ...parentHeaders, ...catHeaders];
         const csvRows = [headers.join(',')];
+        const teamMap = {};
+        for (const t of teams()) { teamMap[t.id] = t; }
         for (const u of rows) {
             const teamStatus = getTeamStatus(u);
             const teamName = u.teams?.[0]?.name || (u.requests?.[0]?.team?.name ? `Req: ${u.requests[0].team.name}` : '');
+            let parents = [];
+            try { parents = JSON.parse(u.parents || '[]'); } catch {}
+            const parentCols = [];
+            for (let i = 0; i < 4; i++) {
+                const p = parents[i];
+                parentCols.push(`"${(p ? `${p.fname || ''} ${p.lname || ''}`.trim() : '').replace(/"/g, '""')}"`);
+                parentCols.push(p?.email || '');
+            }
+            let catLabels = [];
+            const team = u.teams?.[0] ? teamMap[u.teams[0].id] : null;
+            if (team) {
+                try { catLabels = JSON.parse(team.categories || '[]').map(c => c.label); } catch {}
+            }
+            const catCols = [];
+            for (let i = 0; i < 12; i++) {
+                catCols.push(`"${(catLabels[i] || '').replace(/"/g, '""')}"`);
+            }
             csvRows.push([
                 `"${(u.name || '').replace(/"/g, '""')}"`,
                 u.email,
@@ -174,6 +201,8 @@ const AdminManage = (props) => {
                 teamStatus,
                 u.verified ? 'Yes' : 'No',
                 new Date(u.createdAt).toLocaleDateString(),
+                ...parentCols,
+                ...catCols,
             ].join(','));
         }
         const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
@@ -286,12 +315,13 @@ const AdminManage = (props) => {
             if (query && !u.name?.toLowerCase().includes(query) && !u.email?.toLowerCase().includes(query) && !u.teams?.[0]?.name?.toLowerCase().includes(query)) {
                 return false;
             }
-            if (filterVerified() === 'yes' && !u.verified) return false;
-            if (filterVerified() === 'no' && u.verified) return false;
-            if (filterSchool() !== 'all' && u.school !== filterSchool()) return false;
-            if (filterGrade() !== 'all' && u.grade !== filterGrade()) return false;
-            const ts = filterTeamStatus();
-            if (ts !== 'all' && getTeamStatus(u) !== ts) return false;
+            if (filterVerified().length > 0) {
+                const v = u.verified ? 'yes' : 'no';
+                if (!filterVerified().includes(v)) return false;
+            }
+            if (filterSchool().length > 0 && !filterSchool().includes(u.school)) return false;
+            if (filterGrade().length > 0 && !filterGrade().includes(u.grade)) return false;
+            if (filterTeamStatus().length > 0 && !filterTeamStatus().includes(getTeamStatus(u))) return false;
             return true;
         });
 
@@ -884,46 +914,62 @@ const AdminManage = (props) => {
                             />
                         </TextFieldRoot>
                         <Select
-                            options={[{ value: 'all', label: 'All' }, { value: 'yes', label: 'Verified' }, { value: 'no', label: 'Unverified' }]}
+                            multiple
+                            options={[{ value: 'yes', label: 'Verified' }, { value: 'no', label: 'Unverified' }]}
                             optionValue="value" optionTextValue="label" value={filterVerified()}
-                            onChange={(val) => setFilterVerified(val?.value || 'all')}
-                            itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
-                        >
-                            <SelectTrigger class="w-[130px]">
-                                <SelectValue>{state => state.selectedOption()?.label || 'All'}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent />
-                        </Select>
-                        <Select
-                            options={[{ value: 'all', label: 'All Schools' }, ...schools().map(s => ({ value: s.value, label: s.label }))]}
-                            optionValue="value" optionTextValue="label" value={filterSchool()}
-                            onChange={(val) => setFilterSchool(val?.value || 'all')}
+                            onChange={(vals) => setFilterVerified(vals.map(v => v.value))}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
                             <SelectTrigger class="w-[140px]">
-                                <SelectValue>{state => state.selectedOption()?.label || 'All Schools'}</SelectValue>
+                                <SelectValue>{state => {
+                                    const sel = state.selectedOptions();
+                                    return sel.length === 0 ? 'All' : sel.map(o => o.label).join(', ');
+                                }}</SelectValue>
                             </SelectTrigger>
                             <SelectContent />
                         </Select>
                         <Select
-                            options={[{ value: 'all', label: 'All Teams' }, { value: 'on-team', label: 'On Team' }, { value: 'looking', label: 'Looking' }, { value: 'no-team', label: 'No Team' }]}
+                            multiple
+                            options={schools().map(s => ({ value: s.value, label: s.label }))}
+                            optionValue="value" optionTextValue="label" value={filterSchool()}
+                            onChange={(vals) => setFilterSchool(vals.map(v => v.value))}
+                            itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
+                        >
+                            <SelectTrigger class="w-[160px]">
+                                <SelectValue>{state => {
+                                    const sel = state.selectedOptions();
+                                    return sel.length === 0 ? 'All Schools' : sel.length === 1 ? sel[0].label : `${sel.length} Schools`;
+                                }}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent />
+                        </Select>
+                        <Select
+                            multiple
+                            options={[{ value: 'on-team', label: 'On Team' }, { value: 'looking', label: 'Looking' }, { value: 'no-team', label: 'No Team' }]}
                             optionValue="value" optionTextValue="label" value={filterTeamStatus()}
-                            onChange={(val) => setFilterTeamStatus(val?.value || 'all')}
+                            onChange={(vals) => setFilterTeamStatus(vals.map(v => v.value))}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
-                            <SelectTrigger class="w-[130px]">
-                                <SelectValue>{state => state.selectedOption()?.label || 'All Teams'}</SelectValue>
+                            <SelectTrigger class="w-[140px]">
+                                <SelectValue>{state => {
+                                    const sel = state.selectedOptions();
+                                    return sel.length === 0 ? 'All Teams' : sel.map(o => o.label).join(', ');
+                                }}</SelectValue>
                             </SelectTrigger>
                             <SelectContent />
                         </Select>
                         <Select
-                            options={[{ value: 'all', label: 'All Grades' }, { value: '9', label: 'Freshman' }, { value: '10', label: 'Sophomore' }, { value: '11', label: 'Junior' }, { value: '12', label: 'Senior' }]}
+                            multiple
+                            options={[{ value: '9', label: 'Freshman' }, { value: '10', label: 'Sophomore' }, { value: '11', label: 'Junior' }, { value: '12', label: 'Senior' }]}
                             optionValue="value" optionTextValue="label" value={filterGrade()}
-                            onChange={(val) => setFilterGrade(val?.value || 'all')}
+                            onChange={(vals) => setFilterGrade(vals.map(v => v.value))}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
-                            <SelectTrigger class="w-[130px]">
-                                <SelectValue>{state => state.selectedOption()?.label || 'All Grades'}</SelectValue>
+                            <SelectTrigger class="w-[140px]">
+                                <SelectValue>{state => {
+                                    const sel = state.selectedOptions();
+                                    return sel.length === 0 ? 'All Grades' : sel.map(o => o.label).join(', ');
+                                }}</SelectValue>
                             </SelectTrigger>
                             <SelectContent />
                         </Select>
