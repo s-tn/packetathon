@@ -161,10 +161,16 @@ const AdminManage = (props) => {
         for (let i = 1; i <= 4; i++) {
             parentHeaders.push(`Parent ${i} Name`, `Parent ${i} Email`);
         }
-        const catHeaders = [];
-        for (let i = 1; i <= 12; i++) {
-            catHeaders.push(`Category ${i}`);
+        const seenLabels = new Set();
+        const distinctCats = [];
+        for (const c of categories()) {
+            const key = (c.label || '').toLowerCase();
+            if (!key || seenLabels.has(key)) continue;
+            seenLabels.add(key);
+            distinctCats.push({ label: c.label, key });
         }
+        distinctCats.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+        const catHeaders = distinctCats.map(c => c.label);
         const headers = ['Name', 'Email', 'Phone', 'School', 'Major', 'Grade', 'Shirt', 'Team', 'Team Status', 'Verified', 'Created', ...parentHeaders, ...catHeaders];
         const csvRows = [headers.join(',')];
         const teamMap = {};
@@ -180,15 +186,16 @@ const AdminManage = (props) => {
                 parentCols.push(`"${(p ? `${p.fname || ''} ${p.lname || ''}`.trim() : '').replace(/"/g, '""')}"`);
                 parentCols.push(p?.email || '');
             }
-            let catLabels = [];
+            const teamCatKeys = new Set();
             const team = u.teams?.[0] ? teamMap[u.teams[0].id] : null;
             if (team) {
-                try { catLabels = JSON.parse(team.categories || '[]').map(c => c.label); } catch {}
+                try {
+                    for (const tc of JSON.parse(team.categories || '[]')) {
+                        if (tc?.label) teamCatKeys.add(tc.label.toLowerCase());
+                    }
+                } catch {}
             }
-            const catCols = [];
-            for (let i = 0; i < 12; i++) {
-                catCols.push(`"${(catLabels[i] || '').replace(/"/g, '""')}"`);
-            }
+            const catCols = distinctCats.map(c => teamCatKeys.has(c.key) ? '1' : '');
             csvRows.push([
                 `"${(u.name || '').replace(/"/g, '""')}"`,
                 u.email,
@@ -317,11 +324,11 @@ const AdminManage = (props) => {
             }
             if (filterVerified().length > 0) {
                 const v = u.verified ? 'yes' : 'no';
-                if (!filterVerified().includes(v)) return false;
+                if (!filterVerified().some(o => o.value === v)) return false;
             }
-            if (filterSchool().length > 0 && !filterSchool().includes(u.school)) return false;
-            if (filterGrade().length > 0 && !filterGrade().includes(u.grade)) return false;
-            if (filterTeamStatus().length > 0 && !filterTeamStatus().includes(getTeamStatus(u))) return false;
+            if (filterSchool().length > 0 && !filterSchool().some(o => o.value === u.school)) return false;
+            if (filterGrade().length > 0 && !filterGrade().some(o => o.value === u.grade)) return false;
+            if (filterTeamStatus().length > 0 && !filterTeamStatus().some(o => o.value === getTeamStatus(u))) return false;
             return true;
         });
 
@@ -917,7 +924,7 @@ const AdminManage = (props) => {
                             multiple
                             options={[{ value: 'yes', label: 'Verified' }, { value: 'no', label: 'Unverified' }]}
                             optionValue="value" optionTextValue="label" value={filterVerified()}
-                            onChange={(vals) => setFilterVerified(vals.map(v => v.value))}
+                            onChange={setFilterVerified}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
                             <SelectTrigger class="w-[140px]">
@@ -932,7 +939,7 @@ const AdminManage = (props) => {
                             multiple
                             options={schools().map(s => ({ value: s.value, label: s.label }))}
                             optionValue="value" optionTextValue="label" value={filterSchool()}
-                            onChange={(vals) => setFilterSchool(vals.map(v => v.value))}
+                            onChange={setFilterSchool}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
                             <SelectTrigger class="w-[160px]">
@@ -947,7 +954,7 @@ const AdminManage = (props) => {
                             multiple
                             options={[{ value: 'on-team', label: 'On Team' }, { value: 'looking', label: 'Looking' }, { value: 'no-team', label: 'No Team' }]}
                             optionValue="value" optionTextValue="label" value={filterTeamStatus()}
-                            onChange={(vals) => setFilterTeamStatus(vals.map(v => v.value))}
+                            onChange={setFilterTeamStatus}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
                             <SelectTrigger class="w-[140px]">
@@ -962,7 +969,7 @@ const AdminManage = (props) => {
                             multiple
                             options={[{ value: '9', label: 'Freshman' }, { value: '10', label: 'Sophomore' }, { value: '11', label: 'Junior' }, { value: '12', label: 'Senior' }]}
                             optionValue="value" optionTextValue="label" value={filterGrade()}
-                            onChange={(vals) => setFilterGrade(vals.map(v => v.value))}
+                            onChange={setFilterGrade}
                             itemComponent={props => <SelectItem item={props.item}>{props.item.rawValue.label}</SelectItem>}
                         >
                             <SelectTrigger class="w-[140px]">
