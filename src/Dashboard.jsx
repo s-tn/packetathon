@@ -1126,29 +1126,65 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="">
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              formData.set('categories', JSON.stringify(categories()));
-              formData.set('experience', experience()?.value || user().team.experience);
-              formData.set('maxSize', memberCount()?.value || user().team.maxSize);
-              const data = Object.fromEntries(formData.entries());
-              fetch('/api/edit', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ...data, id: user().team.id }),
-              }).then(res => res.json()).then(data => {
-                if (!data.error) {
-                  window.onbeforeunload = null;
-                  location.reload();
-                } else {
-                  alert(data.error || 'Error updating team');
+
+              // Update user profile
+              const profileData = {
+                fname: formData.get('fname'),
+                lname: formData.get('lname'),
+                email: formData.get('email'),
+                phone: document.getElementById('phone')?._value ?? formData.get('phone'),
+                school: school() ?? user().school,
+                major: major() ?? user().major,
+                grade: grade() ?? user().grade,
+              };
+              try {
+                const profileRes = await fetch('/api/user/update', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(profileData),
+                });
+                const profileResult = await profileRes.json();
+                if (profileResult.error) {
+                  alert(profileResult.error);
+                  return;
                 }
-              }).catch(err => {
-                alert('Error updating team');
-              });
+              } catch (err) {
+                alert('Error updating profile');
+                return;
+              }
+
+              // Update team if user is the leader and team fields were changed
+              if (user().team && user().team.isLeader) {
+                const teamData = {
+                  name: user().team.name,
+                  project: user().team.project,
+                  categories: JSON.stringify(categories()),
+                  experience: experience()?.value ?? user().team.experience,
+                  maxSize: memberCount()?.value ?? user().team.maxSize,
+                  id: user().team.id,
+                };
+                try {
+                  const teamRes = await fetch('/api/edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(teamData),
+                  });
+                  const teamResult = await teamRes.json();
+                  if (teamResult.error) {
+                    alert(teamResult.error || 'Error updating team');
+                    return;
+                  }
+                } catch (err) {
+                  alert('Error updating team');
+                  return;
+                }
+              }
+
+              window.onbeforeunload = null;
+              location.reload();
             }} class="flex flex-col items-start w-full">
               <Card class="w-full">
                 <CardHeader>
@@ -1158,16 +1194,16 @@ const Dashboard = () => {
                   <div className="flex flex-row gap-4 w-full">
                     <TextFieldRoot class="flex items-start flex-col justify-center w-full">
                       <TextFieldLabel>First Name</TextFieldLabel>
-                      <TextField name="name" class="h-10 flex w-full p-3" required value={user().fname} />
+                      <TextField name="fname" class="h-10 flex w-full p-3" required value={user().fname} />
                     </TextFieldRoot>
                     <TextFieldRoot class="flex items-start flex-col justify-center w-full">
                       <TextFieldLabel>Last Name</TextFieldLabel>
-                      <TextField name="name" class="h-10 flex w-full p-3" required value={user().lname} />
+                      <TextField name="lname" class="h-10 flex w-full p-3" required value={user().lname} />
                     </TextFieldRoot>
                   </div>
                   <TextFieldRoot class="flex items-start flex-col justify-center w-full">
                     <TextFieldLabel>Email</TextFieldLabel>
-                    <TextField name="name" class="h-10 flex w-full p-3" required value={user().email} />
+                    <TextField name="email" class="h-10 flex w-full p-3" required value={user().email} />
                   </TextFieldRoot>
                   <TextFieldRoot class="flex items-start flex-col justify-center w-full">
                     <TextFieldLabel>Phone Number</TextFieldLabel>
@@ -1388,7 +1424,7 @@ const Dashboard = () => {
     ),
     '/requests': () => (
       <>
-        <Show when={user().team.isLeader} fallback={
+        <Show when={user().team?.isLeader} fallback={
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4">You are not the team leader</h2>
             <p className="text-gray-600 mb-4">Only the team leader can view join requests.</p>
@@ -1488,6 +1524,11 @@ const Dashboard = () => {
                   { (() => {
                     const restricted = ['/create', '/join'];
                     if (restricted.includes(page()) && (user().team || user().registration?.teamId)) {
+                      setPage('/');
+                      return pages['/']();
+                    }
+                    const requiresTeam = ['/team', '/edit', '/requests'];
+                    if (requiresTeam.includes(page()) && !user().team) {
                       setPage('/');
                       return pages['/']();
                     }

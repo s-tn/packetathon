@@ -75,6 +75,73 @@ const routes: RouteDefinition[] = [
     },
   },
   {
+    path: '/api/user/update',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') {
+        res.writeHead(405, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
+        return;
+      }
+      if (!req.session.userId) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Not logged in' }));
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.session.userId },
+      });
+
+      if (!user) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'User not found' }));
+        return;
+      }
+      if (!user.verified) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'User not verified' }));
+        return;
+      }
+
+      const { fname, lname, email, phone, school, major, grade } = req.body;
+
+      if (email !== undefined && email !== null) {
+        const trimmed = email.trim();
+        if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid email address.' }));
+          return;
+        }
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          fname: fname ?? user.fname,
+          lname: lname ?? user.lname,
+          name: `${fname ?? user.fname} ${lname ?? user.lname}`,
+          email: email ?? user.email,
+          phone: phone ?? user.phone,
+          school: school ?? user.school,
+          major: major ?? user.major,
+          grade: grade ?? user.grade,
+        },
+      }).then(() => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({}));
+      }).catch(err => {
+        if (err?.code === 'P2002' && err?.meta?.target?.includes('email')) {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'That email address is already in use.' }));
+          return;
+        }
+        console.error(err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+      });
+    },
+  },
+  {
     path: '/api/delete',
     handler: async (req, res) => {
       const id = req.session.userId;
